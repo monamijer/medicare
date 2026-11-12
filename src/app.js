@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const webRoutes = require('./routes/web');
+const { createSessionMiddleware } = require('./config/session');
 const viewLocals = require('./middleware/viewLocals');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
@@ -17,6 +18,7 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use(createSessionMiddleware());
 app.use(viewLocals);
 app.use('/', webRoutes);
 

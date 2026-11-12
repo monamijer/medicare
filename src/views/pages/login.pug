@@ -1,0 +1,16 @@
+extends ../layouts/base
+
+block content
+  .auth
+    h1 Connexion
+    p.text-muted Accédez à votre espace MediCare.
+    if error
+      .alert.alert-danger(role='alert')= error
+    form(method='post', action='/login', data-loading-text='Connexion en cours…')
+      .field
+        label.label(for='email') Adresse e-mail
+        input#email.input(type='email', name='email', value=email, autocomplete='username', required, autofocus)
+      .field
+        label.label(for='password') Mot de passe
+        input#password.input(type='password', name='password', autocomplete='current-password', required)
+      button.btn.btn-primary(type='submit') Se connecter

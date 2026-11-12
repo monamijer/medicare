@@ -9,6 +9,7 @@ html(lang='fr', class=currentUser ? 'has-sidebar' : '')
     link(rel='stylesheet', href='/css/layout.css')
     if currentUser
       script(src='/js/shell.js')
+    script(src='/js/forms.js', defer)
   body
     include ../partials/header
     if currentUser

@@ -1,15 +1,23 @@
+const db = require('./helpers/setup');
 const test = require('node:test');
 const assert = require('node:assert');
-const config = require('../src/config/env');
 const app = require('../src/app');
+const User = require('../src/models/User');
 const { getNavigation } = require('../src/utils/navigation');
+const { createClient } = require('./helpers/http');
+const { createUser, loginAs } = require('./helpers/fixtures');
 
-async function get(path) {
-  const server = app.listen(0);
-  const res = await fetch(`http://127.0.0.1:${server.address().port}${path}`);
-  const html = await res.text();
-  server.close();
-  return { res, html };
+let client;
+
+test.before(async () => { await db.connect(); await User.init(); });
+test.beforeEach(async () => { await db.clear(); client = createClient(app); });
+test.afterEach(() => client.close());
+test.after(db.close);
+
+async function homeAs(role) {
+  const user = await createUser(role);
+  await loginAs(client, user.email);
+  return (await client.request('/')).html;
 }
 
 test('getNavigation marks only the longest matching item as active', () => {
@@ -20,36 +28,23 @@ test('getNavigation marks only the longest matching item as active', () => {
   assert.deepStrictEqual(getNavigation('unknown', '/'), []);
 });
 
-test('without a user there is no sidebar and no hamburger', async () => {
-  config.devPreviewRole = '';
-  const { html } = await get('/');
-  assert.doesNotMatch(html, /id="sidebar"/);
-  assert.doesNotMatch(html, /sidebar-toggle/);
-  assert.match(html, /MediCare/);
-});
-
-test('admin preview renders hamburger, role menu, active link and footer', async () => {
-  config.devPreviewRole = 'admin';
-  const { html } = await get('/');
+test('admin sees hamburger, full menu, active link, role and footer', async () => {
+  const html = await homeAs('admin');
   assert.match(html, /id="sidebar-toggle"/);
   assert.match(html, /Médecins/);
-  assert.match(html, /class="nav-link is-active" href="\/" aria-current="page"|href="\/" class="nav-link is-active"/);
+  assert.match(html, /Spécialités/);
+  assert.match(html, /aria-current="page"/);
   assert.match(html, /Administrateur/);
   assert.match(html, /Version 0\.1\.0/);
 });
 
-test('patient preview shows patient menu only', async () => {
-  config.devPreviewRole = 'patient';
-  const { html } = await get('/');
-  assert.match(html, /Prendre rendez-vous/);
-  assert.doesNotMatch(html, /Spécialités/);
-});
-
-test('preview role is ignored in production', async () => {
-  config.devPreviewRole = 'admin';
-  config.nodeEnv = 'production';
-  const { html } = await get('/');
-  config.nodeEnv = 'test';
-  config.devPreviewRole = '';
-  assert.doesNotMatch(html, /id="sidebar"/);
+test('doctor and patient menus are role specific', async () => {
+  const doctor = await homeAs('doctor');
+  assert.match(doctor, /Mes disponibilités/);
+  assert.doesNotMatch(doctor, /Spécialités/);
+  await db.clear();
+  client.jar.clear();
+  const patient = await homeAs('patient');
+  assert.match(patient, /Prendre rendez-vous/);
+  assert.doesNotMatch(patient, /Mes disponibilités/);
 });
