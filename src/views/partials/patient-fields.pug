@@ -1,0 +1,14 @@
+include field
+
+//- Shared by admin form, registration and profile. mode: 'create' | 'edit'
+mixin patientFields(values, errors, mode)
+  +field('Prénom', 'firstName', values.firstName, errors, { type: 'text', required: true, maxlength: '60' })
+  +field('Nom', 'lastName', values.lastName, errors, { type: 'text', required: true, maxlength: '60' })
+  +field('Adresse e-mail (identifiant de connexion)', 'email', values.email, errors, { type: 'email', required: true, autocomplete: 'email' })
+  .field
+    label.label(for='password')= mode === 'edit' ? 'Nouveau mot de passe (laisser vide pour le conserver)' : 'Mot de passe (8 caractères minimum)'
+    input#password.input(type='password', name='password', autocomplete='new-password', required=(mode !== 'edit'), aria-invalid=errors.password ? 'true' : false, aria-describedby=errors.password ? 'password-error' : false)
+    if errors.password
+      p#password-error.field-error= errors.password
+  +field('Date de naissance', 'birthDate', values.birthDate, errors, { type: 'date', required: true, min: '1900-01-01', max: new Date().toISOString().slice(0, 10) })
+  +field('Téléphone (facultatif)', 'phone', values.phone, errors, { type: 'tel', maxlength: '20', autocomplete: 'tel' })

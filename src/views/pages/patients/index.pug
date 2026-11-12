@@ -1,0 +1,43 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 Patients
+    a.btn.btn-primary(href='/patients/new')
+      +icon('plus')
+      span Nouveau patient
+  if patients.length
+    .table-wrap
+      table.table
+        thead
+          tr
+            th(scope='col') Nom
+            th(scope='col') E-mail
+            th(scope='col') Date de naissance
+            th(scope='col') Téléphone
+            th.col-actions(scope='col') Actions
+        tbody
+          each patient in patients
+            tr
+              td
+                a(href=`/patients/${patient._id}`) #{patient.user.firstName} #{patient.user.lastName}
+              td= patient.user.email
+              td= formatDate(patient.birthDate)
+              td= patient.phone || '-'
+              td.col-actions
+                .table-actions
+                  a.btn.btn-secondary.btn-sm(href=`/patients/${patient._id}/edit`)
+                    +icon('pencil')
+                    span Modifier
+                  form(method='post', action=`/patients/${patient._id}/delete`, data-confirm=`Supprimer ${patient.user.firstName} ${patient.user.lastName} ? Son compte sera supprimé. Cette action est définitive.`, data-confirm-title='Supprimer le patient', data-confirm-label='Supprimer')
+                    button.btn.btn-danger.btn-sm(type='submit')
+                      +icon('trash-2')
+                      span Supprimer
+  else
+    .empty-state
+      h2 Aucun patient
+      p Les patients peuvent créer leur compte eux-mêmes, ou vous pouvez en ajouter un.
+      a.btn.btn-primary(href='/patients/new')
+        +icon('plus')
+        span Nouveau patient

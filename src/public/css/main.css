@@ -105,3 +105,5 @@ a:hover { color: var(--color-primary-hover); }
 .auth { max-width: 24rem; margin: var(--space-6) auto; padding: var(--space-5); background: var(--color-surface); border: var(--border); border-radius: var(--radius-lg); }
 .auth h1 { margin-bottom: var(--space-2); }
 .auth .btn { width: 100%; justify-content: center; }
+.auth-wide { max-width: 32rem; }
+.auth-alt { margin: var(--space-4) 0 0; font-size: var(--text-sm); text-align: center; }

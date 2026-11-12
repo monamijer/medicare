@@ -1,0 +1,17 @@
+extends ../../layouts/base
+include ../../partials/patient-fields
+
+block content
+  .auth.auth-wide
+    h1 Créer un compte patient
+    p.text-muted Prenez et gérez vos rendez-vous en ligne.
+    if errors.form
+      .alert.alert-danger(role='alert')
+        span.alert-text= errors.form
+    form(method='post', action='/register', data-loading-text='Création du compte…')
+      +patientFields(values, errors, 'create')
+      button.btn.btn-primary(type='submit') Créer mon compte
+    p.auth-alt Déjà un compte ?
+      |
+      |
+      a(href='/login') Se connecter

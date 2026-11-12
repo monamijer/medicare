@@ -1,0 +1,18 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 #{patient.user.firstName} #{patient.user.lastName}
+    a.btn.btn-secondary(href=`/patients/${patient._id}/edit`)
+      +icon('pencil')
+      span Modifier
+  dl.details
+    dt Adresse e-mail
+    dd= patient.user.email
+    dt Date de naissance
+    dd= formatDate(patient.birthDate)
+    dt Téléphone
+    dd= patient.phone || '-'
+  p
+    a(href='/patients') Retour à la liste des patients

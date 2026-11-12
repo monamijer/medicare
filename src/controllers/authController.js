@@ -9,6 +9,16 @@ function showLogin(req, res) {
   renderLogin(res, 200, '', null);
 }
 
+// Starts a logged-in session. A new session id prevents session fixation.
+function startSession(req, res, next, user, welcome) {
+  req.session.regenerate((regenError) => {
+    if (regenError) return next(regenError);
+    req.session.user = { id: user.id, fullName: user.fullName, role: user.role };
+    if (welcome) req.flash('success', welcome);
+    return req.session.save((saveError) => (saveError ? next(saveError) : res.redirect('/')));
+  });
+}
+
 async function login(req, res, next) {
   const email = req.body.email || '';
   const invalid = firstError(req);
@@ -16,12 +26,7 @@ async function login(req, res, next) {
 
   try {
     const user = await authService.authenticate(email, req.body.password);
-    // New session id on login prevents session fixation.
-    return req.session.regenerate((regenError) => {
-      if (regenError) return next(regenError);
-      req.session.user = { id: user.id, fullName: user.fullName, role: user.role };
-      return req.session.save((saveError) => (saveError ? next(saveError) : res.redirect('/')));
-    });
+    return startSession(req, res, next, user);
   } catch (err) {
     if (err.status === 401) return renderLogin(res, 401, email, err.message);
     return next(err);
@@ -37,4 +42,4 @@ function logout(req, res, next) {
   });
 }
 
-module.exports = { showLogin, login, logout };
+module.exports = { showLogin, login, logout, startSession };

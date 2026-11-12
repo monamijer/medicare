@@ -1,3 +1,4 @@
+const { formatDate } = require('../utils/dates');
 const pkg = require('../../package.json');
 const { ROLE_LABELS, getNavigation } = require('../utils/navigation');
 
@@ -8,6 +9,7 @@ function viewLocals(req, res, next) {
   res.locals.currentUser = user;
   res.locals.roleLabel = user ? ROLE_LABELS[user.role] : null;
   res.locals.nav = user ? getNavigation(user.role, req.path) : [];
+  res.locals.formatDate = formatDate;
   res.locals.appVersion = pkg.version;
   res.locals.currentYear = new Date().getFullYear();
   next();
