@@ -128,3 +128,6 @@ html[data-sidebar='open'] .sidebar {
 @media (min-width: 62rem) {
   html.has-sidebar[data-sidebar='open'] .app-body { margin-left: var(--sidebar-width); }
 }
+
+/* Pages without a sidebar (login) are centred */
+html:not(.has-sidebar) .page { margin: 0 auto; }
