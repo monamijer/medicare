@@ -1,0 +1,24 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1 Disponibilités
+  if doctors.length
+    p.text-muted Choisissez un médecin pour gérer ses créneaux.
+    .table-wrap
+      table.table
+        thead
+          tr
+            th(scope='col') Médecin
+            th(scope='col') Spécialité
+        tbody
+          each doctor in doctors
+            tr
+              td
+                a(href=`/availability?doctor=${doctor._id}`) #{doctor.user.firstName} #{doctor.user.lastName}
+              td= doctor.specialty.name
+  else
+    .empty-state
+      h2 Aucun médecin
+      p Ajoutez d'abord un médecin pour définir ses disponibilités.
+      a.btn.btn-primary(href='/doctors/new') Nouveau médecin

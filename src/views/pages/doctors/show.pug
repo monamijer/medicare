@@ -4,9 +4,13 @@ block content
   include ../../partials/icon
   .page-header
     h1 #{doctor.user.firstName} #{doctor.user.lastName}
-    a.btn.btn-secondary(href=`/doctors/${doctor._id}/edit`)
-      +icon('pencil')
-      span Modifier
+    .table-actions
+      a.btn.btn-secondary(href=`/availability?doctor=${doctor._id}`)
+        +icon('clock')
+        span Disponibilités
+      a.btn.btn-secondary(href=`/doctors/${doctor._id}/edit`)
+        +icon('pencil')
+        span Modifier
   dl.details
     dt Spécialité
     dd= doctor.specialty.name

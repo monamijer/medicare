@@ -1,0 +1,33 @@
+extends ../../layouts/base
+include ../../partials/field
+
+block content
+  - const admin = currentUser.role === 'admin'
+  - const back = admin ? `/availability?doctor=${doctor._id}` : '/availability'
+  .page-header
+    div
+      h1= slot ? 'Modifier le créneau' : 'Ajouter des disponibilités'
+      if admin
+        p.text-muted Médecin : #{doctorName}
+  if errors.form
+    .alert.alert-danger(role='alert')
+      span.alert-text= errors.form
+  form.form(method='post', action=slot ? `/availability/${slot._id}` : '/availability', data-loading-text='Enregistrement…')
+    if admin
+      input(type='hidden', name='doctor', value=String(doctor._id))
+    +field('Date', 'date', values.date, errors, { type: 'date', required: true, min: today, autofocus: true })
+    +field('De', 'from', values.from, errors, { type: 'time', required: true })
+    +field('À', 'to', values.to, errors, { type: 'time', required: true })
+    if !slot
+      .field
+        label.label(for='duration') Durée d'un créneau
+        select#duration.input(name='duration', aria-invalid=errors.duration ? 'true' : false, aria-describedby=errors.duration ? 'duration-error' : 'duration-help')
+          each option in [['15', '15 minutes'], ['20', '20 minutes'], ['30', '30 minutes'], ['45', '45 minutes'], ['60', '1 heure'], ['0', 'Un seul créneau (toute la plage)']]
+            option(value=option[0], selected=option[0] === values.duration)= option[1]
+        if errors.duration
+          p#duration-error.field-error= errors.duration
+        else
+          p#duration-help.field-hint Les créneaux sont créés à la suite, de l'heure de début à l'heure de fin.
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer
+      a.btn.btn-secondary(href=back) Annuler

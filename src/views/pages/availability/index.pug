@@ -1,0 +1,53 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  - const q = admin ? `?doctor=${doctor._id}` : ''
+  .page-header
+    div
+      h1 Disponibilités
+      if admin
+        p.text-muted Médecin : #{doctorName} (
+          a(href='/availability') changer
+          | )
+    a.btn.btn-primary(href=`/availability/new${q}`)
+      +icon('plus')
+      span Ajouter des créneaux
+  if groups.length
+    each group in groups
+      h2.day-title= group.label
+      .table-wrap.day-table
+        table.table
+          thead
+            tr
+              th(scope='col') Horaire
+              th(scope='col') Statut
+              th.col-actions(scope='col') Actions
+          tbody
+            each slot in group.slots
+              tr
+                td= slot.time
+                td
+                  if slot.status === 'free'
+                    span.badge.badge-success Libre
+                  else
+                    span.badge.badge-muted Réservé
+                td.col-actions
+                  if slot.status === 'free'
+                    .table-actions
+                      a.btn.btn-secondary.btn-sm(href=`/availability/${slot.id}/edit`)
+                        +icon('pencil')
+                        span Modifier
+                      form(method='post', action=`/availability/${slot.id}/delete${q}`, data-confirm=`Supprimer le créneau du ${group.label} (${slot.time}) ?`, data-confirm-title='Supprimer le créneau', data-confirm-label='Supprimer')
+                        button.btn.btn-danger.btn-sm(type='submit')
+                          +icon('trash-2')
+                          span Supprimer
+                  else
+                    span.text-muted -
+  else
+    .empty-state
+      h2 Aucune disponibilité à venir
+      p Ajoutez des créneaux pour que les patients puissent prendre rendez-vous.
+      a.btn.btn-primary(href=`/availability/new${q}`)
+        +icon('plus')
+        span Ajouter des créneaux

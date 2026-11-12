@@ -10,6 +10,7 @@ const NAVIGATION = {
     { href: '/appointments', label: 'Rendez-vous', icon: 'calendar-days' },
     { href: '/doctors', label: 'Médecins', icon: 'stethoscope' },
     { href: '/patients', label: 'Patients', icon: 'users' },
+    { href: '/availability', label: 'Disponibilités', icon: 'clock' },
     { href: '/specialties', label: 'Spécialités', icon: 'tags' },
     { href: '/users', label: 'Utilisateurs', icon: 'settings' },
   ],

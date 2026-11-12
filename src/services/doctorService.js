@@ -23,6 +23,12 @@ async function get(id) {
   return doctor;
 }
 
+async function getByUser(userId) {
+  const doctor = await populate(Doctor.findOne({ user: userId })).lean();
+  if (!doctor) throw new HttpError(404, 'Profil médecin introuvable.');
+  return doctor;
+}
+
 async function assertSpecialtyExists(id) {
   if (!mongoose.isValidObjectId(id) || !(await Specialty.exists({ _id: id }))) {
     throw new HttpError(422, 'Choisissez une spécialité valide.', 'specialty');
@@ -76,4 +82,4 @@ async function remove(id) {
   return doctor;
 }
 
-module.exports = { list, get, create, update, remove };
+module.exports = { list, get, getByUser, create, update, remove };
