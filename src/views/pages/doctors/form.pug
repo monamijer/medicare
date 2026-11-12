@@ -1,0 +1,39 @@
+extends ../../layouts/base
+include ../../partials/field
+
+block content
+  .page-header
+    h1= doctor ? 'Modifier le médecin' : 'Nouveau médecin'
+  if !specialties.length
+    .alert.alert-info(role='status')
+      span.alert-text Aucune spécialité n'existe encore.
+        |
+        |
+        a(href='/specialties/new') Créez d'abord une spécialité
+        |  pour pouvoir ajouter un médecin.
+  else
+    if errors.form
+      .alert.alert-danger(role='alert')
+        span.alert-text= errors.form
+    form.form(method='post', action=doctor ? `/doctors/${doctor._id}` : '/doctors', data-loading-text='Enregistrement…')
+      +field('Prénom', 'firstName', values.firstName, errors, { type: 'text', required: true, maxlength: '60', autofocus: true })
+      +field('Nom', 'lastName', values.lastName, errors, { type: 'text', required: true, maxlength: '60' })
+      +field('Adresse e-mail (identifiant de connexion)', 'email', values.email, errors, { type: 'email', required: true, autocomplete: 'off' })
+      .field
+        label.label(for='password')= doctor ? 'Nouveau mot de passe (laisser vide pour le conserver)' : 'Mot de passe (8 caractères minimum)'
+        input#password.input(type='password', name='password', autocomplete='new-password', required=!doctor, aria-invalid=errors.password ? 'true' : false, aria-describedby=errors.password ? 'password-error' : false)
+        if errors.password
+          p#password-error.field-error= errors.password
+      .field
+        label.label(for='specialty') Spécialité
+        select#specialty.input(name='specialty', required, aria-invalid=errors.specialty ? 'true' : false, aria-describedby=errors.specialty ? 'specialty-error' : false)
+          option(value='') Choisir une spécialité
+          each item in specialties
+            option(value=String(item._id), selected=String(item._id) === values.specialty)= item.name
+        if errors.specialty
+          p#specialty-error.field-error= errors.specialty
+      +field('Numéro de licence', 'licenseNumber', values.licenseNumber, errors, { type: 'text', required: true, maxlength: '30' })
+      +field('Téléphone (facultatif)', 'phone', values.phone, errors, { type: 'tel', maxlength: '20', autocomplete: 'off' })
+      .form-actions
+        button.btn.btn-primary(type='submit') Enregistrer
+        a.btn.btn-secondary(href=doctor ? `/doctors/${doctor._id}` : '/doctors') Annuler

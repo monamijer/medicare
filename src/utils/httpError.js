@@ -1,7 +1,9 @@
 class HttpError extends Error {
-  constructor(status, message) {
+  // `field` (optional) names the form field the message belongs to.
+  constructor(status, message, field) {
     super(message);
     this.status = status;
+    this.field = field;
   }
 }
 

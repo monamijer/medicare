@@ -1,0 +1,7 @@
+//- Text input with label and inline error: +field('Label', 'name', values.name, errors, { type: 'email', required: true })
+mixin field(label, name, value, errors, attrs)
+  .field
+    label.label(for=name)= label
+    input.input(id=name, name=name, value=value, aria-invalid=errors[name] ? 'true' : false, aria-describedby=errors[name] ? `${name}-error` : false)&attributes(attrs || {})
+    if errors[name]
+      p.field-error(id=`${name}-error`)= errors[name]

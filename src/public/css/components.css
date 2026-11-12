@@ -34,3 +34,8 @@
 .dialog::backdrop { background: var(--color-overlay); }
 .dialog-title { margin-bottom: var(--space-2); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+.details { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-3) var(--space-5); margin: 0 0 var(--space-5); padding: var(--space-4) var(--space-5); background: var(--color-surface); border: var(--border); border-radius: var(--radius-lg); }
+.details dt { color: var(--color-text-muted); font-size: var(--text-sm); }
+.details dd { margin: 0; }
+select.input { appearance: auto; }
