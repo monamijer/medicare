@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const webRoutes = require('./routes/web');
 const { createSessionMiddleware } = require('./config/session');
+const flash = require('./middleware/flash');
 const viewLocals = require('./middleware/viewLocals');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
@@ -19,6 +20,7 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 app.use(createSessionMiddleware());
+app.use(flash);
 app.use(viewLocals);
 app.use('/', webRoutes);
 

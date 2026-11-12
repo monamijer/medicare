@@ -9,7 +9,7 @@ const assets = path.join(root, 'src/public/assets');
 const ICONS = [
   'menu', 'heart-pulse', 'layout-dashboard', 'calendar-days', 'stethoscope',
   'users', 'user-round', 'tags', 'settings', 'clock', 'plus', 'log-out',
-  'circle-user', 'x',
+  'circle-user', 'x', 'pencil', 'trash-2', 'circle-check', 'circle-alert', 'info',
 ];
 const FONT_WEIGHTS = [400, 500, 600];
 

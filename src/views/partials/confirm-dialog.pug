@@ -1,0 +1,7 @@
+dialog#confirm-dialog.dialog(aria-labelledby='confirm-title')
+  form(method='dialog')
+    h2#confirm-title.dialog-title
+    p#confirm-message.dialog-message
+    .dialog-actions
+      button.btn.btn-secondary(type='submit', value='cancel') Annuler
+      button#confirm-accept.btn.btn-danger(type='submit', value='confirm')

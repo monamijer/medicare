@@ -1,6 +1,5 @@
 const authService = require('../services/authService');
 const { firstError } = require('../validators/auth');
-const { COOKIE_NAME } = require('../config/session');
 
 function renderLogin(res, status, email, error) {
   res.status(status).render('pages/login', { title: 'Connexion', email, error });
@@ -30,9 +29,10 @@ async function login(req, res, next) {
 }
 
 function logout(req, res, next) {
-  req.session.destroy((err) => {
+  // regenerate = delete the old session, then start a fresh one to carry the message.
+  req.session.regenerate((err) => {
     if (err) return next(err);
-    res.clearCookie(COOKIE_NAME);
+    req.flash('info', 'Vous avez été déconnecté.');
     return res.redirect('/login');
   });
 }

@@ -87,3 +87,13 @@ test('password is never present in any rendered page', async () => {
   assert.doesNotMatch(home.html, new RegExp(PASSWORD));
   assert.doesNotMatch(home.html, /\$2[aby]\$/);
 });
+
+test('logout shows a one-time message on the login page', async () => {
+  await createUser('admin');
+  await loginAs(client, 'admin@clinique.test');
+  await client.request('/logout', { method: 'POST' });
+  const first = await client.request('/login');
+  assert.match(first.html, /Vous avez été déconnecté\./);
+  const second = await client.request('/login');
+  assert.doesNotMatch(second.html, /Vous avez été déconnecté\./);
+});

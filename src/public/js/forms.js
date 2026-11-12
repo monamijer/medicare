@@ -1,5 +1,6 @@
 // Loading state: disable the submit button once a form is sent.
 document.addEventListener('submit', function (event) {
+  if (event.defaultPrevented) return; // e.g. waiting for a confirmation
   var form = event.target;
   var button = form.querySelector('[type="submit"]');
   if (!button || !form.dataset.loadingText) return;

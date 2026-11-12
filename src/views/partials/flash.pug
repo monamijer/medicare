@@ -1,0 +1,10 @@
+include icon
+
+if flash && flash.length
+  each message in flash
+    - const icons = { success: 'circle-check', danger: 'circle-alert', info: 'info' }
+    .alert(class=`alert-${message.type}`, role=message.type === 'danger' ? 'alert' : 'status', data-autodismiss=message.type === 'success' ? '' : false)
+      +icon(icons[message.type] || 'info')
+      span.alert-text= message.message
+      button.alert-close(type='button', data-dismiss, aria-label='Fermer le message')
+        +icon('x')
