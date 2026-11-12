@@ -219,3 +219,13 @@ test('only upcoming slots are listed, grouped by day in French', async () => {
   assert.strictEqual((html.match(/<tr><td>\d\d:\d\d – /g) || []).length, 2);
   assert.match(html, /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche) \d{1,2} \S+ 20\d\d/);
 });
+
+test('deleting a doctor also removes their slots', async () => {
+  const a = await makeDoctor('dr1@clinique.test', 'L1');
+  const b = await makeDoctor('dr2@clinique.test', 'L2');
+  await batch(a.client);
+  await batch(b.client);
+  await doctorService.remove(a.doctor.id);
+  assert.strictEqual(await Slot.countDocuments({ doctor: a.doctor.id }), 0);
+  assert.strictEqual(await Slot.countDocuments({ doctor: b.doctor.id }), 4);
+});

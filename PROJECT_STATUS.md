@@ -34,6 +34,6 @@
 - Phase 6: appointments (doctor search by specialty, slot selection, atomic booking `findOneAndUpdate({status:'free'})`, modify, cancel releasing the slot, daily list, patient history); slot `status` is already `free|booked`
 
 ## Known problems
-- Deleting a doctor or patient is a hard delete; Phase 6 must refuse/deactivate when appointments exist, and doctor deletion should also remove their slots
+- Deleting a doctor or patient is a hard delete; Phase 6 must refuse/deactivate when appointments exist
 - Overlap check is not atomic across concurrent requests with different start times (no transactions on standalone MongoDB); unique {doctor,start} covers identical starts; only doctors/admins create slots so risk is low
 - Sidebar links point to pages not built yet (404 until their phase)

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Doctor = require('../models/Doctor');
 const Specialty = require('../models/Specialty');
 const User = require('../models/User');
+const AvailabilitySlot = require('../models/AvailabilitySlot');
 const userService = require('./userService');
 const HttpError = require('../utils/httpError');
 
@@ -77,6 +78,7 @@ async function update(id, { firstName, lastName, email, password, specialty, lic
 
 async function remove(id) {
   const doctor = await get(id);
+  await AvailabilitySlot.deleteMany({ doctor: id });
   await Doctor.deleteOne({ _id: id });
   await User.deleteOne({ _id: doctor.user._id });
   return doctor;
