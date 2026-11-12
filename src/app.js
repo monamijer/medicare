@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const webRoutes = require('./routes/web');
+const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -16,5 +17,8 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 app.use('/', webRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
