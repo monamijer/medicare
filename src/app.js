@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const webRoutes = require('./routes/web');
+const viewLocals = require('./middleware/viewLocals');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -16,6 +17,7 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use(viewLocals);
 app.use('/', webRoutes);
 
 app.use(notFound);

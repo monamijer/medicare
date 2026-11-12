@@ -1,9 +1,19 @@
 doctype html
-html(lang='fr')
+html(lang='fr', class=currentUser ? 'has-sidebar' : '')
   head
     meta(charset='utf-8')
     meta(name='viewport', content='width=device-width, initial-scale=1')
-    title #{title ? title + ' · ' : ''}MediCare
+    title #{title ? title + ' | ' : ''}MediCare
+    link(rel='stylesheet', href='/css/tokens.css')
     link(rel='stylesheet', href='/css/main.css')
+    link(rel='stylesheet', href='/css/layout.css')
+    if currentUser
+      script(src='/js/shell.js')
   body
-    block content
+    include ../partials/header
+    if currentUser
+      include ../partials/sidebar
+    .app-body
+      main.page
+        block content
+      include ../partials/footer

@@ -1,0 +1,18 @@
+include icon
+
+header.app-header
+  if currentUser
+    button#sidebar-toggle.icon-btn(type='button', aria-controls='sidebar', aria-expanded='false', aria-label='Afficher ou masquer le menu')
+      +icon('menu')
+  a.brand(href='/')
+    +icon('heart-pulse')
+    span MediCare
+  if currentUser
+    .header-user
+      +icon('circle-user')
+      .header-user-text
+        span.header-user-name= currentUser.fullName
+        span.header-user-role= roleLabel
+      form(method='post', action='/logout')
+        button.icon-btn(type='submit', aria-label='Se déconnecter', title='Se déconnecter')
+          +icon('log-out')

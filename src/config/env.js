@@ -5,5 +5,6 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
   mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/medicare',
   sessionSecret: process.env.SESSION_SECRET,
+  devPreviewRole: process.env.DEV_PREVIEW_ROLE || '',
   clinicTimezone: process.env.CLINIC_TIMEZONE || 'Africa/Bujumbura',
 };

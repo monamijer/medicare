@@ -1,7 +1,7 @@
 extends ../layouts/base
 
 block content
-  main
+  .page-header
     h1 Erreur #{status}
-    p= message
-    a(href='/') Retour à l'accueil
+  p= message
+  a.btn.btn-secondary(href='/') Retour à l'accueil

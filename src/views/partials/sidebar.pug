@@ -1,0 +1,11 @@
+include icon
+
+aside#sidebar.sidebar
+  nav(aria-label='Navigation principale')
+    ul.nav-list
+      each item in nav
+        li
+          a.nav-link(href=item.href, class=item.active ? 'is-active' : '', aria-current=item.active ? 'page' : false)
+            +icon(item.icon)
+            span= item.label
+#sidebar-backdrop.sidebar-backdrop
