@@ -13,15 +13,13 @@ test('GET /api/v1/health returns ok', async () => {
   assert.deepStrictEqual(body, { status: 'ok' });
 });
 
-test('GET / renders the French home page', async () => {
+test('GET / redirects anonymous visitors to the login page', async () => {
   const server = app.listen(0);
   const { port } = server.address();
-  const res = await fetch(`http://127.0.0.1:${port}/`);
-  const html = await res.text();
+  const res = await fetch(`http://127.0.0.1:${port}/`, { redirect: 'manual' });
   server.close();
-  assert.strictEqual(res.status, 200);
-  assert.match(html, /lang="fr"/);
-  assert.match(html, /MediCare/);
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), '/login');
 });
 
 test('unknown web page renders a 404 error page', async () => {

@@ -30,6 +30,7 @@ test('getNavigation marks only the longest matching item as active', () => {
 
 test('admin sees hamburger, full menu, active link, role and footer', async () => {
   const html = await homeAs('admin');
+  assert.match(html, /lang="fr"/);
   assert.match(html, /id="sidebar-toggle"/);
   assert.match(html, /Médecins/);
   assert.match(html, /Spécialités/);
