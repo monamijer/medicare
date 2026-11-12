@@ -168,3 +168,23 @@ test('names are escaped and unknown ids give 404', async () => {
     assert.strictEqual((await admin.request(`/doctors/${id}/delete`, { method: 'POST' })).status, 404);
   }
 });
+
+test('a specialty used by a doctor cannot be deleted, an unused one can', async () => {
+  await add();
+  const unused = await Specialty.create({ name: 'Dermatologie' });
+
+  const blocked = await admin.request(`/specialties/${cardio.id}/delete`, { method: 'POST' });
+  assert.strictEqual(blocked.status, 302);
+  assert.strictEqual(await Specialty.countDocuments({ _id: cardio.id }), 1);
+  const list = await admin.request('/specialties');
+  assert.match(list.html, /utilisée par au moins un médecin/);
+  assert.match(list.html, /alert-danger/);
+
+  await admin.request(`/specialties/${unused.id}/delete`, { method: 'POST' });
+  assert.strictEqual(await Specialty.countDocuments({ _id: unused.id }), 0);
+
+  const doctor = await Doctor.findOne();
+  await admin.request(`/doctors/${doctor.id}/delete`, { method: 'POST' });
+  await admin.request(`/specialties/${cardio.id}/delete`, { method: 'POST' });
+  assert.strictEqual(await Specialty.countDocuments({ _id: cardio.id }), 0);
+});

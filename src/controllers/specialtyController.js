@@ -53,8 +53,13 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const specialty = await specialtyService.remove(req.params.id);
-  req.flash('success', `Spécialité « ${specialty.name} » supprimée.`);
+  try {
+    const specialty = await specialtyService.remove(req.params.id);
+    req.flash('success', `Spécialité « ${specialty.name} » supprimée.`);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+  }
   res.redirect('/specialties');
 }
 

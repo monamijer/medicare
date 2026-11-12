@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Specialty = require('../models/Specialty');
+const Doctor = require('../models/Doctor');
 const HttpError = require('../utils/httpError');
 
 const NOT_FOUND = 'Spécialité introuvable.';
@@ -40,6 +41,9 @@ async function update(id, { name }) {
 
 async function remove(id) {
   const specialty = await get(id);
+  if (await Doctor.exists({ specialty: id })) {
+    throw new HttpError(409, `La spécialité « ${specialty.name} » est utilisée par au moins un médecin et ne peut pas être supprimée.`);
+  }
   await Specialty.deleteOne({ _id: id });
   return specialty;
 }
