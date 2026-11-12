@@ -1,0 +1,36 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 Spécialités
+    a.btn.btn-primary(href='/specialties/new')
+      +icon('plus')
+      span Nouvelle spécialité
+  if specialties.length
+    .table-wrap
+      table.table
+        thead
+          tr
+            th(scope='col') Nom
+            th.col-actions(scope='col') Actions
+        tbody
+          each specialty in specialties
+            tr
+              td= specialty.name
+              td.col-actions
+                .table-actions
+                  a.btn.btn-secondary.btn-sm(href=`/specialties/${specialty._id}/edit`)
+                    +icon('pencil')
+                    span Modifier
+                  form(method='post', action=`/specialties/${specialty._id}/delete`, data-confirm=`Supprimer la spécialité « ${specialty.name} » ? Cette action est définitive.`, data-confirm-title='Supprimer la spécialité', data-confirm-label='Supprimer')
+                    button.btn.btn-danger.btn-sm(type='submit')
+                      +icon('trash-2')
+                      span Supprimer
+  else
+    .empty-state
+      h2 Aucune spécialité
+      p Ajoutez une première spécialité pour pouvoir y associer des médecins.
+      a.btn.btn-primary(href='/specialties/new')
+        +icon('plus')
+        span Nouvelle spécialité

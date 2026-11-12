@@ -1,0 +1,14 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1= specialty ? 'Modifier la spécialité' : 'Nouvelle spécialité'
+  form.form(method='post', action=specialty ? `/specialties/${specialty._id}` : '/specialties', data-loading-text='Enregistrement…')
+    .field
+      label.label(for='name') Nom de la spécialité
+      input#name.input(type='text', name='name', value=values.name, required, maxlength='80', autofocus, aria-invalid=errors.name ? 'true' : false, aria-describedby=errors.name ? 'name-error' : false)
+      if errors.name
+        p#name-error.field-error= errors.name
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer
+      a.btn.btn-secondary(href='/specialties') Annuler
