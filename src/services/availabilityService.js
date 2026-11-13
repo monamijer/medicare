@@ -81,7 +81,7 @@ async function update(id, { date, from, to }) {
   await assertNoOverlap(slot.doctor, wanted, slot._id);
   try {
     // The status guard makes the edit fail if the slot was booked in the meantime.
-    const updated = await Slot.findOneAndUpdate({ _id: id, status: 'free' }, wanted[0], { new: true });
+    const updated = await Slot.findOneAndUpdate({ _id: id, status: 'free' }, wanted[0], { returnDocument: 'after' });
     if (!updated) throw new HttpError(409, 'Ce créneau vient d\'être réservé : il ne peut pas être modifié.');
     return updated;
   } catch (err) {

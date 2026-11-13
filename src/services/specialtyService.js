@@ -33,7 +33,7 @@ async function create({ name }) {
 async function update(id, { name }) {
   await get(id);
   try {
-    return await Specialty.findByIdAndUpdate(id, { name }, { new: true, runValidators: true });
+    return await Specialty.findByIdAndUpdate(id, { name }, { returnDocument: 'after', runValidators: true });
   } catch (err) {
     throw translate(err);
   }
