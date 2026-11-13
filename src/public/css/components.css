@@ -56,3 +56,23 @@ select.input { appearance: auto; }
 textarea.input { min-height: 5rem; resize: vertical; }
 .badge-danger { color: var(--color-danger); background: var(--color-danger-soft); }
 .capitalize { text-transform: capitalize; }
+
+.form-wide { max-width: 44rem; }
+.slot-picker { margin: 0 0 var(--space-4); padding: 0; border: 0; }
+.slot-picker .day-title:first-of-type { margin-top: var(--space-3); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.slot-choice { cursor: pointer; }
+.slot-choice .slot-btn { cursor: pointer; }
+.slot-choice:hover .slot-btn { background: var(--color-primary-soft); }
+.slot-choice input:checked + .slot-btn { color: var(--color-on-primary); background: var(--color-primary); }
+.slot-choice input:focus-visible + .slot-btn { box-shadow: var(--focus-ring); }
+
+.form-wide { max-width: 44rem; }
+.slot-picker { margin: 0 0 var(--space-4); padding: 0; border: 0; }
+.slot-picker .day-title:first-of-type { margin-top: var(--space-3); }
+.slot-choice { position: relative; }
+.slot-choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.slot-choice label { display: inline-block; padding: var(--space-2) var(--space-3); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--color-primary); background: var(--color-surface); border: 1px solid var(--color-primary); border-radius: var(--radius-md); transition: background-color var(--transition); }
+.slot-choice input:hover + label { background: var(--color-primary-soft); }
+.slot-choice input:checked + label { color: var(--color-on-primary); background: var(--color-primary); }
+.slot-choice input:focus-visible + label { box-shadow: var(--focus-ring); }

@@ -1,6 +1,6 @@
 # PROJECT_STATUS
 
-**Phase:** 6 — Appointments (steps 1-2 of 4 done: booking, list, cancellation); Phases 1-5 delivered, 4c/5 visually unconfirmed
+**Phase:** 6 — Appointments (steps 1-3 of 4 done: booking, list, cancellation, modification); Phases 1-5 delivered, 4c/5 visually unconfirmed
 
 ## Completed
 - Express skeleton, env config, health endpoint
@@ -17,6 +17,7 @@
 - Availability (Phase 5): `AvailabilitySlot` (doctor, start, end, status free/booked; unique {doctor,start}). Doctors manage own slots, admins any doctor's via `?doctor=<id>` (also linked from the doctor page). One form adds a range split into 15/20/30/45/60-min slots or one single slot (max 48); overlaps refused (adjacent OK); edit/delete only while free; times typed in clinic time (`CLINIC_TIMEZONE`) and stored in UTC; list shows upcoming slots grouped by day
 - Appointments step 1: `Appointment` (slot, doctor, patient, start/end copied from slot, status confirmed|cancelled, reason<=300; partial unique index on slot where confirmed). Patient flow: `/appointments/new` (pick specialty -> doctors with free-slot counts) -> `/appointments/new/:doctorId` (free upcoming slots by day) -> `/appointments/book/:slotId` (confirm + optional reason) -> POST `/appointments`. Booking = atomic `findOneAndUpdate({status:'free', start>now}) -> booked`, then create appointment, slot released if creation fails. A patient cannot hold two overlapping appointments. `/appointments` lists upcoming + history, scoped by role (patient own, doctor own, admin all)
 - Appointments step 2: POST `/appointments/:id/cancel` (patient own, doctor own, admin any; others get 404). Appointment is cancelled atomically first (`status:'confirmed', start>now`), then its slot is released (`status:'booked'` guard), so a double cancel cannot free a re-booked slot. Past or already-cancelled appointments are refused with a message. `cancelledAt`/`cancelledBy` kept; history shows who cancelled
+- Appointments step 3: `/appointments/:id/edit` + POST `/appointments/:id` (patient own, admin any; doctors 403, others 404). Move to another free slot of the SAME doctor and/or change the reason. Safe order: claim new slot -> switch appointment (guarded by `status:'confirmed'` and its current slot) -> release old slot; any failure releases the claimed slot. A slot that vanished or was taken gives a normal message, not a 404 page. Tests assert the invariant (booked slots == confirmed appointments' slots, times match) under concurrent move/move and move/cancel
 - App shell: header + hamburger, collapsible role-based sidebar, footer, responsive (drawer < 62rem)
 
 ## Decisions
@@ -29,13 +30,14 @@
 - `src/app.js`, `src/server.js`, `src/config/env.js`, `src/config/database.js`, `src/middleware/errorHandler.js`, `src/middleware/viewLocals.js`, `src/utils/navigation.js`, `src/models/User.js`, `src/services/{userService,authService}.js`, `src/middleware/auth.js`, `src/config/session.js`, `src/{models/Specialty,services/specialtyService,controllers/specialtyController,routes/web/specialties}.js`, `src/views/pages/specialties/`, `src/{models/Doctor,services/doctorService,controllers/doctorController,routes/web/doctors,validators/doctor}.js`, `src/views/pages/doctors/`, `src/views/partials/{field,patient-fields}.pug` (reusable form mixins), `src/{models/Patient,services/patientService,controllers/{patientController,accountController},routes/web/{patients,account},validators/patient,utils/dates}.js`, `src/views/pages/{patients,account}/`, `src/{models/AvailabilitySlot,services/availabilityService,controllers/availabilityController,routes/web/availability,validators/availability,utils/time}.js`, `src/views/pages/availability/`, `src/{models/Appointment,services/appointmentService,controllers/appointmentController,routes/web/appointments,validators/appointment,utils/slotGroups}.js`, `src/views/pages/appointments/`, `tests/helpers/clinic.js` (shared scenario builders), `src/views/{layouts,partials}`, `src/public/css/{tokens,main,layout}.css`, `src/public/js/shell.js`
 
 ## Tests
-- `npm test` (node:test): 96 pass against a real MongoDB 7 (per-process DB `medicare_test_<pid>`, dropped after): health, 404s, shell/nav, user model, login/logout, flash, RBAC, specialties, doctors, patients/registration/profile, time utils, availability, booking (incl. 8-way concurrent booking), cancellation
+- `npm test` (node:test): 108 pass against a real MongoDB 7 (per-process DB `medicare_test_<pid>`, dropped after): health, 404s, shell/nav, user model, login/logout, flash, RBAC, specialties, doctors, patients/registration/profile, time utils, availability, booking (incl. 8-way concurrent booking), cancellation, modification (incl. races)
 - Confirmation dialog and notifications are JS-only and not browser-tested by me; no CSRF token (SameSite=Lax only), to revisit in Phase 8
 
 ## Next
-- Phase 6 step 3: modify (atomic move to another slot); step 4: daily list (date filter for doctor/admin) + refuse/handle doctor or patient deletion when appointments exist
+- Phase 6 step 4: daily list (date filter for doctor/admin) + refuse/handle doctor or patient deletion when appointments exist
 
 ## Known problems
+- Mongoose 9: use `returnDocument: 'after'` (not `new: true`) so findOneAndUpdate returns the updated document
 - Deleting a doctor or patient is a hard delete; Phase 6 must refuse/deactivate when appointments exist
 - If the process dies between claiming a slot and creating its appointment, the slot stays `booked` without appointment (no transactions); a reconcile script could free such slots
 - Overlap check is not atomic across concurrent requests with different start times (no transactions on standalone MongoDB); unique {doctor,start} covers identical starts; only doctors/admins create slots so risk is low

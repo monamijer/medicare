@@ -81,4 +81,51 @@ async function cancel(req, res) {
   res.redirect('/appointments');
 }
 
-module.exports = { search, doctorSlots, bookForm, book, index, cancel };
+async function renderModify(res, status, data, { slot, reason, errors = {} } = {}) {
+  const { appointment, freeSlots } = data;
+  res.status(status).render('pages/appointments/edit', {
+    title: 'Modifier le rendez-vous',
+    appointment,
+    doctorName: doctorName(appointment.doctor),
+    currentDay: formatDay(appointment.start),
+    currentTime: `${formatTime(appointment.start)} – ${formatTime(appointment.end)}`,
+    groups: groupSlotsByDay(freeSlots),
+    selected: slot || String(appointment.slot),
+    reason: reason === undefined ? appointment.reason : reason,
+    errors,
+  });
+}
+
+async function modifyForm(req, res) {
+  try {
+    await renderModify(res, 200, await appointmentService.getForModify(req.session.user, req.params.id));
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+    res.redirect('/appointments');
+  }
+}
+
+async function modify(req, res) {
+  const errors = fieldErrors(req);
+  if (errors.slot) {
+    req.flash('danger', errors.slot);
+    return res.redirect(`/appointments/${req.params.id}/edit`);
+  }
+  const reason = (req.body.reason || '').trim();
+  try {
+    if (Object.keys(errors).length) {
+      const data = await appointmentService.getForModify(req.session.user, req.params.id);
+      return await renderModify(res, 422, data, { slot: req.body.slot, reason, errors });
+    }
+    const appointment = await appointmentService.modify(req.session.user, req.params.id, { slotId: req.body.slot, reason });
+    req.flash('success', `Rendez-vous modifié : ${formatDay(appointment.start)} à ${formatTime(appointment.start)}.`);
+    return res.redirect('/appointments');
+  } catch (err) {
+    if (err.status !== 409 && err.status !== 422) throw err;
+    req.flash('danger', err.message);
+    return res.redirect(`/appointments/${req.params.id}/edit`);
+  }
+}
+
+module.exports = { search, doctorSlots, bookForm, book, index, cancel, modifyForm, modify };

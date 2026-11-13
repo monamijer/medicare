@@ -43,10 +43,15 @@ mixin appointmentTable(items, isHistory)
                 span.badge.badge-success Confirmé
             if !isHistory
               td.col-actions
-                form(method='post', action=`/appointments/${item._id}/cancel`, data-confirm=`Annuler le rendez-vous du ${formatDay(item.start)} à ${formatTime(item.start)} ? Le créneau sera libéré.`, data-confirm-title='Annuler le rendez-vous', data-confirm-label='Annuler le rendez-vous')
-                  button.btn.btn-danger.btn-sm(type='submit')
-                    +icon('x')
-                    span Annuler
+                .table-actions
+                  if role !== 'doctor'
+                    a.btn.btn-secondary.btn-sm(href=`/appointments/${item._id}/edit`)
+                      +icon('pencil')
+                      span Modifier
+                  form(method='post', action=`/appointments/${item._id}/cancel`, data-confirm=`Annuler le rendez-vous du ${formatDay(item.start)} à ${formatTime(item.start)} ? Le créneau sera libéré.`, data-confirm-title='Annuler le rendez-vous', data-confirm-label='Annuler le rendez-vous')
+                    button.btn.btn-danger.btn-sm(type='submit')
+                      +icon('x')
+                      span Annuler
 
 block content
   include ../../partials/icon

@@ -1,6 +1,7 @@
 // Shared scenario builders for appointment tests: doctors, patients, slots, booking.
 const Specialty = require('../../src/models/Specialty');
 const Slot = require('../../src/models/AvailabilitySlot');
+const Appointment = require('../../src/models/Appointment');
 const doctorService = require('../../src/services/doctorService');
 const patientService = require('../../src/services/patientService');
 const { createClient } = require('./http');
@@ -48,7 +49,21 @@ function clinicHelpers(app) {
     return client;
   };
 
-  return { newClient, closeAll, makeSpecialties, makeDoctor, makePatient, makeSlot, book, loginStaff };
+  // Invariant: every confirmed appointment sits on a booked slot with the same times,
+  // and no booked slot exists without a confirmed appointment.
+  async function consistency() {
+    const confirmed = await Appointment.find({ status: 'confirmed' }).lean();
+    const booked = await Slot.find({ status: 'booked' }).lean();
+    const ids = (list) => list.map((x) => String(x._id)).sort();
+    const bookedById = new Map(booked.map((b) => [String(b._id), b]));
+    const timesMatch = confirmed.every((a) => {
+      const slot = bookedById.get(String(a.slot));
+      return slot && slot.start.getTime() === a.start.getTime() && slot.end.getTime() === a.end.getTime();
+    });
+    return { confirmedSlots: confirmed.map((a) => String(a.slot)).sort(), bookedSlots: ids(booked), timesMatch };
+  }
+
+  return { newClient, closeAll, consistency, makeSpecialties, makeDoctor, makePatient, makeSlot, book, loginStaff };
 }
 
 module.exports = clinicHelpers;

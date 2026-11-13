@@ -1,0 +1,40 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1 Modifier le rendez-vous
+  dl.details
+    dt Médecin
+    dd= doctorName
+    dt Spécialité
+    dd= appointment.doctor.specialty.name
+    if currentUser.role === 'admin'
+      dt Patient
+      dd #{appointment.patient.user.firstName} #{appointment.patient.user.lastName}
+  form.form.form-wide(method='post', action=`/appointments/${appointment._id}`, data-loading-text='Enregistrement…')
+    fieldset.slot-picker
+      legend.label Créneau
+      h2.day-title Créneau actuel : #{currentDay}
+      .slot-grid
+        .slot-choice
+          input#slot-current(type='radio', name='slot', value=String(appointment.slot), checked=selected === String(appointment.slot))
+          label(for='slot-current')= currentTime
+      if groups.length
+        p.field-hint Ou choisissez un autre créneau libre du même médecin :
+        each group in groups
+          h2.day-title= group.label
+          .slot-grid
+            each slot in group.slots
+              .slot-choice
+                input(type='radio', name='slot', id=`slot-${slot.id}`, value=slot.id, checked=selected === slot.id)
+                label(for=`slot-${slot.id}`)= slot.time
+      else
+        p.field-hint Ce médecin n'a pas d'autre créneau libre pour le moment.
+    .field
+      label.label(for='reason') Motif de la consultation (facultatif)
+      textarea#reason.input(name='reason', maxlength='300', aria-invalid=errors.reason ? 'true' : false, aria-describedby=errors.reason ? 'reason-error' : false)= reason
+      if errors.reason
+        p#reason-error.field-error= errors.reason
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer les modifications
+      a.btn.btn-secondary(href='/appointments') Retour

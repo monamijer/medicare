@@ -53,7 +53,7 @@ async function book(userId, slotId, reason = '') {
   const slot = await AvailabilitySlot.findOneAndUpdate(
     { _id: slotId, status: 'free', start: { $gt: new Date() } },
     { status: 'booked' },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!slot) throw new HttpError(409, UNAVAILABLE);
 
@@ -95,22 +95,34 @@ async function listFor(user) {
   };
 }
 
-// Cancel an upcoming appointment and free its slot.
-// Order matters: the appointment is cancelled atomically FIRST, so a second cancel can never
-// release a slot that someone else has booked in the meantime.
-async function cancel(user, id) {
+// Loads an appointment the user owns. Other people's appointments look like they do not exist.
+async function loadOwned(user, id) {
   const notFound = new HttpError(404, 'Rendez-vous introuvable.');
   if (!mongoose.isValidObjectId(id)) throw notFound;
   const appointment = await Appointment.findById(id).lean();
   const filter = await ownerFilter(user);
   const allowed = appointment && filter && Object.entries(filter).every(([key, value]) => String(appointment[key]) === String(value));
-  if (!allowed) throw notFound; // other people's appointments look like they do not exist
+  if (!allowed) throw notFound;
+  return appointment;
+}
 
+function assertModifiable(appointment) {
+  if (appointment.status === 'cancelled') throw new HttpError(409, 'Ce rendez-vous est annulé : il ne peut plus être modifié.');
+  if (appointment.start <= new Date()) throw new HttpError(409, 'Ce rendez-vous est passé : il ne peut plus être modifié.');
+}
+
+const releaseSlot = (slotId) => AvailabilitySlot.updateOne({ _id: slotId, status: 'booked' }, { status: 'free' });
+
+// Cancel an upcoming appointment and free its slot.
+// Order matters: the appointment is cancelled atomically FIRST, so a second cancel can never
+// release a slot that someone else has booked in the meantime.
+async function cancel(user, id) {
+  await loadOwned(user, id);
   const now = new Date();
   const cancelled = await Appointment.findOneAndUpdate(
     { _id: id, status: 'confirmed', start: { $gt: now } },
     { status: 'cancelled', cancelledAt: now, cancelledBy: user.role },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!cancelled) {
     const fresh = await Appointment.findById(id).lean();
@@ -118,8 +130,70 @@ async function cancel(user, id) {
       ? 'Ce rendez-vous est déjà annulé.'
       : 'Ce rendez-vous est passé : il ne peut plus être annulé.');
   }
-  await AvailabilitySlot.updateOne({ _id: cancelled.slot, status: 'booked' }, { status: 'free' });
+  await releaseSlot(cancelled.slot);
   return cancelled;
 }
 
-module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel };
+// Data for the "modify" page: the appointment plus the other free slots of the same doctor.
+async function getForModify(user, id) {
+  const appointment = await loadOwned(user, id);
+  assertModifiable(appointment);
+  const [populated, freeSlots] = await Promise.all([
+    populateAll(Appointment.findById(id)).lean(),
+    listFreeSlots(appointment.doctor),
+  ]);
+  return { appointment: populated, freeSlots };
+}
+
+// Move an appointment to another free slot of the same doctor and/or change its reason.
+// Safe order: claim the new slot -> switch the appointment (atomic, guarded by its current slot)
+// -> release the old slot. The appointment is never without a booked slot, and any failure
+// puts the claimed slot back.
+async function modify(user, id, { slotId, reason = '' }) {
+  if (user.role === 'doctor') throw new HttpError(403, 'Les médecins ne peuvent pas déplacer un rendez-vous.');
+  const appointment = await loadOwned(user, id);
+  assertModifiable(appointment);
+
+  if (String(slotId) === String(appointment.slot)) {
+    const updated = await Appointment.findOneAndUpdate({ _id: id, status: 'confirmed', slot: appointment.slot }, { reason }, { returnDocument: 'after', runValidators: true });
+    if (!updated) throw new HttpError(409, "Ce rendez-vous n'est plus modifiable.");
+    return updated;
+  }
+
+  if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
+  const wanted = await AvailabilitySlot.findById(slotId).lean();
+  if (!wanted) throw new HttpError(409, UNAVAILABLE); // e.g. the doctor deleted it while the page was open
+  if (String(wanted.doctor) !== String(appointment.doctor)) {
+    throw new HttpError(422, 'Choisissez un créneau du même médecin. Pour un autre médecin, annulez puis reprenez rendez-vous.');
+  }
+  if (await Appointment.exists({ _id: { $ne: id }, patient: appointment.patient, status: 'confirmed', start: { $lt: wanted.end }, end: { $gt: wanted.start } })) {
+    throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.');
+  }
+
+  const claimed = await AvailabilitySlot.findOneAndUpdate(
+    { _id: slotId, doctor: appointment.doctor, status: 'free', start: { $gt: new Date() } },
+    { status: 'booked' },
+    { returnDocument: 'after' }
+  );
+  if (!claimed) throw new HttpError(409, UNAVAILABLE);
+
+  let moved;
+  try {
+    moved = await Appointment.findOneAndUpdate(
+      { _id: id, status: 'confirmed', slot: appointment.slot },
+      { slot: claimed._id, start: claimed.start, end: claimed.end, reason },
+      { returnDocument: 'after', runValidators: true }
+    );
+  } catch (err) {
+    await releaseSlot(claimed._id);
+    throw err.code === 11000 ? new HttpError(409, UNAVAILABLE) : err;
+  }
+  if (!moved) {
+    await releaseSlot(claimed._id); // cancelled or moved by someone else in the meantime
+    throw new HttpError(409, "Ce rendez-vous n'est plus modifiable.");
+  }
+  await releaseSlot(appointment.slot);
+  return moved;
+}
+
+module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel, getForModify, modify };
