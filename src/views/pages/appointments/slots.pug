@@ -1,0 +1,19 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    div
+      h1 #{doctorName}
+      p.text-muted= doctor.specialty.name
+  if groups.length
+    each group in groups
+      h2.day-title= group.label
+      .slot-grid
+        each slot in group.slots
+          a.slot-btn(href=`/appointments/book/${slot.id}`)= slot.time
+  else
+    .empty-state
+      h2 Aucune disponibilité
+      p Ce médecin n'a pas de créneau libre pour le moment.
+  p.section-title
+    a(href=`/appointments/new?specialty=${specialtyId}`) Retour à la recherche

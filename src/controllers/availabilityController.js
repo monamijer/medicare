@@ -2,7 +2,8 @@ const availabilityService = require('../services/availabilityService');
 const doctorService = require('../services/doctorService');
 const HttpError = require('../utils/httpError');
 const { fieldErrors } = require('../validators/common');
-const { toLocalParts, formatDay, formatTime, dayKey } = require('../utils/time');
+const { toLocalParts } = require('../utils/time');
+const { groupSlotsByDay } = require('../utils/slotGroups');
 
 const isAdmin = (req) => req.session.user.role === 'admin';
 const doctorName = (doctor) => `${doctor.user.firstName} ${doctor.user.lastName}`;
@@ -27,20 +28,6 @@ async function loadSlot(req) {
   return { slot, doctor };
 }
 
-function groupByDay(slots) {
-  const groups = [];
-  for (const slot of slots) {
-    const key = dayKey(slot.start);
-    let group = groups[groups.length - 1];
-    if (!group || group.key !== key) {
-      group = { key, label: formatDay(slot.start), slots: [] };
-      groups.push(group);
-    }
-    group.slots.push({ id: String(slot._id), time: `${formatTime(slot.start)} – ${formatTime(slot.end)}`, status: slot.status });
-  }
-  return groups;
-}
-
 function renderForm(res, status, { doctor, slot = null, values, errors = {} }) {
   res.status(status).render('pages/availability/form', {
     title: slot ? 'Modifier le créneau' : 'Ajouter des disponibilités',
@@ -61,7 +48,7 @@ async function index(req, res) {
   }
   const slots = await availabilityService.listUpcoming(doctor._id);
   return res.render('pages/availability/index', {
-    title: 'Disponibilités', doctor, doctorName: doctorName(doctor), groups: groupByDay(slots), total: slots.length,
+    title: 'Disponibilités', doctor, doctorName: doctorName(doctor), groups: groupSlotsByDay(slots), total: slots.length,
     admin: isAdmin(req),
   });
 }

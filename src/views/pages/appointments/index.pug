@@ -1,0 +1,65 @@
+extends ../../layouts/base
+
+//- One table for every role; columns adapt to who is looking.
+mixin appointmentTable(items, isHistory)
+  .table-wrap
+    table.table
+      thead
+        tr
+          th(scope='col') Date et heure
+          if role !== 'doctor'
+            th(scope='col') Médecin
+          if role !== 'patient'
+            th(scope='col') Patient
+          if role === 'doctor'
+            th(scope='col') Motif
+          th(scope='col') Statut
+      tbody
+        each item in items
+          tr
+            td
+              span.capitalize= formatDay(item.start)
+              br
+              span.text-muted #{formatTime(item.start)} – #{formatTime(item.end)}
+            if role !== 'doctor'
+              td
+                | #{item.doctor.user.firstName} #{item.doctor.user.lastName}
+                br
+                span.text-muted= item.doctor.specialty.name
+            if role !== 'patient'
+              td #{item.patient.user.firstName} #{item.patient.user.lastName}
+            if role === 'doctor'
+              td= item.reason || '-'
+            td
+              if item.status === 'cancelled'
+                span.badge.badge-danger Annulé
+              else if isHistory
+                span.badge.badge-muted Terminé
+              else
+                span.badge.badge-success Confirmé
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1= title
+    if role === 'patient'
+      a.btn.btn-primary(href='/appointments/new')
+        +icon('plus')
+        span Prendre rendez-vous
+  if !upcoming.length && !history.length
+    .empty-state
+      h2 Aucun rendez-vous
+      if role === 'patient'
+        p Recherchez un médecin par spécialité pour réserver un créneau.
+        a.btn.btn-primary(href='/appointments/new') Prendre rendez-vous
+      else
+        p Les rendez-vous apparaîtront ici dès qu'un patient aura réservé.
+  else
+    h2.section-title À venir
+    if upcoming.length
+      +appointmentTable(upcoming, false)
+    else
+      p.text-muted Aucun rendez-vous à venir.
+    if history.length
+      h2.section-title Historique
+      +appointmentTable(history, true)

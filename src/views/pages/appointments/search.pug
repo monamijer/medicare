@@ -1,0 +1,43 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1 Prendre rendez-vous
+  if !specialties.length
+    .empty-state
+      h2 Aucune spécialité disponible
+      p La clinique n'a pas encore ouvert de consultations en ligne. Revenez plus tard.
+  else
+    form.search-form(method='get', action='/appointments/new')
+      .field
+        label.label(for='specialty') Spécialité
+        select#specialty.input(name='specialty', required)
+          option(value='') Choisir une spécialité
+          each item in specialties
+            option(value=String(item._id), selected=String(item._id) === selected)= item.name
+      button.btn.btn-primary(type='submit') Rechercher
+    if results
+      if results.length
+        .table-wrap
+          table.table
+            thead
+              tr
+                th(scope='col') Médecin
+                th(scope='col') Disponibilités
+                th.col-actions(scope='col') Action
+            tbody
+              each result in results
+                tr
+                  td #{result.doctor.user.firstName} #{result.doctor.user.lastName}
+                  td
+                    if result.freeSlots
+                      span.badge.badge-success #{result.freeSlots} créneau#{result.freeSlots > 1 ? 'x' : ''} disponible#{result.freeSlots > 1 ? 's' : ''}
+                    else
+                      span.text-muted Aucune disponibilité
+                  td.col-actions
+                    if result.freeSlots
+                      a.btn.btn-primary.btn-sm(href=`/appointments/new/${result.doctor._id}`) Voir les créneaux
+      else
+        .empty-state
+          h2 Aucun médecin
+          p Aucun médecin n'est encore rattaché à cette spécialité.

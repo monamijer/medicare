@@ -1,0 +1,24 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1 Confirmer le rendez-vous
+  dl.details
+    dt Médecin
+    dd= doctorName
+    dt Spécialité
+    dd= doctor.specialty.name
+    dt Date
+    dd.capitalize= day
+    dt Horaire
+    dd= time
+  form.form(method='post', action='/appointments', data-loading-text='Confirmation…')
+    input(type='hidden', name='slot', value=String(slot._id))
+    .field
+      label.label(for='reason') Motif de la consultation (facultatif)
+      textarea#reason.input(name='reason', maxlength='300', aria-invalid=errors.reason ? 'true' : false, aria-describedby=errors.reason ? 'reason-error' : false)= reason
+      if errors.reason
+        p#reason-error.field-error= errors.reason
+    .form-actions
+      button.btn.btn-primary(type='submit') Confirmer le rendez-vous
+      a.btn.btn-secondary(href=`/appointments/new/${doctor._id}`) Choisir un autre créneau
