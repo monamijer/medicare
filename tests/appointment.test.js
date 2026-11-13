@@ -5,19 +5,16 @@ const app = require('../src/app');
 const Appointment = require('../src/models/Appointment');
 const Doctor = require('../src/models/Doctor');
 const Patient = require('../src/models/Patient');
-const Specialty = require('../src/models/Specialty');
 const Slot = require('../src/models/AvailabilitySlot');
 const User = require('../src/models/User');
-const doctorService = require('../src/services/doctorService');
-const patientService = require('../src/services/patientService');
 const appointmentService = require('../src/services/appointmentService');
-const { createClient } = require('./helpers/http');
 const { createUser, loginAs } = require('./helpers/fixtures');
+const clinicHelpers = require('./helpers/clinic');
 
-const clients = [];
-const newClient = () => { const c = createClient(app); clients.push(c); return c; };
+const { newClient, closeAll, makeSpecialties, makeDoctor: addDoctor, makePatient, makeSlot, book } = clinicHelpers(app);
 let cardio;
 let derm;
+const makeDoctor = (name, specialty = cardio) => addDoctor(name, specialty);
 
 test.before(async () => {
   await db.connect();
@@ -25,34 +22,10 @@ test.before(async () => {
 });
 test.beforeEach(async () => {
   await db.clear();
-  [cardio, derm] = await Promise.all([Specialty.create({ name: 'Cardiologie' }), Specialty.create({ name: 'Dermatologie' })]);
+  [cardio, derm] = await makeSpecialties();
 });
-test.afterEach(() => { while (clients.length) clients.pop().close(); });
+test.afterEach(closeAll);
 test.after(db.close);
-
-
-async function makeDoctor(name, specialty = cardio) {
-  return doctorService.create({
-    firstName: 'Dr', lastName: name, email: `${name.toLowerCase()}@clinique.test`, password: 'motdepasse1',
-    specialty: specialty.id, licenseNumber: `L-${name}`, phone: '',
-  });
-}
-
-async function makePatient(name) {
-  const patient = await patientService.create({
-    firstName: 'Pat', lastName: name, email: `${name.toLowerCase()}@exemple.test`, password: 'motdepasse1', birthDate: '1990-01-01', phone: '',
-  });
-  const client = newClient();
-  await loginAs(client, `${name.toLowerCase()}@exemple.test`);
-  return { patient, client };
-}
-
-const makeSlot = (doctor, startOffsetHours = 48, lengthMin = 30, status = 'free') => {
-  const start = new Date(Date.now() + startOffsetHours * 3600000);
-  return Slot.create({ doctor: doctor.id, start, end: new Date(start.getTime() + lengthMin * 60000), status });
-};
-
-const book = (client, slot, reason = '') => client.request('/appointments', { method: 'POST', form: { slot: String(slot.id || slot._id), reason } });
 
 test('only patients can search and book; staff get 403, anonymous users are redirected', async () => {
   await createUser('admin');

@@ -14,6 +14,8 @@ mixin appointmentTable(items, isHistory)
           if role === 'doctor'
             th(scope='col') Motif
           th(scope='col') Statut
+          if !isHistory
+            th.col-actions(scope='col') Action
       tbody
         each item in items
           tr
@@ -33,10 +35,18 @@ mixin appointmentTable(items, isHistory)
             td
               if item.status === 'cancelled'
                 span.badge.badge-danger Annulé
+                - const names = { patient: 'le patient', doctor: 'le médecin', admin: "l'administration" }
+                span.text-muted.cancel-by  par #{item.cancelledBy === role ? 'vous' : names[item.cancelledBy] || 'la clinique'}
               else if isHistory
                 span.badge.badge-muted Terminé
               else
                 span.badge.badge-success Confirmé
+            if !isHistory
+              td.col-actions
+                form(method='post', action=`/appointments/${item._id}/cancel`, data-confirm=`Annuler le rendez-vous du ${formatDay(item.start)} à ${formatTime(item.start)} ? Le créneau sera libéré.`, data-confirm-title='Annuler le rendez-vous', data-confirm-label='Annuler le rendez-vous')
+                  button.btn.btn-danger.btn-sm(type='submit')
+                    +icon('x')
+                    span Annuler
 
 block content
   include ../../partials/icon

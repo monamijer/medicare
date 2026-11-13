@@ -70,4 +70,15 @@ async function index(req, res) {
   });
 }
 
-module.exports = { search, doctorSlots, bookForm, book, index };
+async function cancel(req, res) {
+  try {
+    await appointmentService.cancel(req.session.user, req.params.id);
+    req.flash('success', 'Rendez-vous annulé. Le créneau est de nouveau disponible.');
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+  }
+  res.redirect('/appointments');
+}
+
+module.exports = { search, doctorSlots, bookForm, book, index, cancel };

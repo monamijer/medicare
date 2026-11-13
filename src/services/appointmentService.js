@@ -69,14 +69,23 @@ async function book(userId, slotId, reason = '') {
   }
 }
 
-// Appointments visible to a user: patients and doctors see their own, admins see all.
-async function listFor(user) {
-  const filter = {};
-  if (user.role === 'patient') filter.patient = (await Patient.findOne({ user: user.id }).lean())?._id;
-  if (user.role === 'doctor') filter.doctor = (await Doctor.findOne({ user: user.id }).lean())?._id;
-  if (filter.patient === undefined && user.role === 'patient') return { upcoming: [], history: [] };
-  if (filter.doctor === undefined && user.role === 'doctor') return { upcoming: [], history: [] };
+// Which appointments a user owns: patients and doctors their own, admins everything.
+// Returns null when a patient/doctor account has no profile.
+async function ownerFilter(user) {
+  if (user.role === 'patient') {
+    const patient = await Patient.findOne({ user: user.id }).select('_id').lean();
+    return patient ? { patient: patient._id } : null;
+  }
+  if (user.role === 'doctor') {
+    const doctor = await Doctor.findOne({ user: user.id }).select('_id').lean();
+    return doctor ? { doctor: doctor._id } : null;
+  }
+  return {};
+}
 
+async function listFor(user) {
+  const filter = await ownerFilter(user);
+  if (!filter) return { upcoming: [], history: [] };
   const all = await populateAll(Appointment.find(filter)).lean();
   const now = new Date();
   const isUpcoming = (a) => a.status === 'confirmed' && a.end > now;
@@ -86,4 +95,31 @@ async function listFor(user) {
   };
 }
 
-module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor };
+// Cancel an upcoming appointment and free its slot.
+// Order matters: the appointment is cancelled atomically FIRST, so a second cancel can never
+// release a slot that someone else has booked in the meantime.
+async function cancel(user, id) {
+  const notFound = new HttpError(404, 'Rendez-vous introuvable.');
+  if (!mongoose.isValidObjectId(id)) throw notFound;
+  const appointment = await Appointment.findById(id).lean();
+  const filter = await ownerFilter(user);
+  const allowed = appointment && filter && Object.entries(filter).every(([key, value]) => String(appointment[key]) === String(value));
+  if (!allowed) throw notFound; // other people's appointments look like they do not exist
+
+  const now = new Date();
+  const cancelled = await Appointment.findOneAndUpdate(
+    { _id: id, status: 'confirmed', start: { $gt: now } },
+    { status: 'cancelled', cancelledAt: now, cancelledBy: user.role },
+    { new: true }
+  );
+  if (!cancelled) {
+    const fresh = await Appointment.findById(id).lean();
+    throw new HttpError(409, fresh && fresh.status === 'cancelled'
+      ? 'Ce rendez-vous est déjà annulé.'
+      : 'Ce rendez-vous est passé : il ne peut plus être annulé.');
+  }
+  await AvailabilitySlot.updateOne({ _id: cancelled.slot, status: 'booked' }, { status: 'free' });
+  return cancelled;
+}
+
+module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel };

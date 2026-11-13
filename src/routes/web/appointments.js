@@ -13,4 +13,7 @@ router.get('/new/:doctorId', requireRole('patient'), controller.doctorSlots);
 router.get('/book/:slotId', requireRole('patient'), controller.bookForm);
 router.post('/', requireRole('patient'), bookRules, controller.book);
 
+// Any signed-in role may cancel what it owns (admins: anything).
+router.post('/:id/cancel', controller.cancel);
+
 module.exports = router;
