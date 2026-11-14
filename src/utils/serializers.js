@@ -13,4 +13,29 @@ function userDto(user) {
   };
 }
 
-module.exports = { userDto, id };
+const specialtyDto = (specialty) => ({ id: id(specialty), name: specialty.name });
+
+// Public view: what any signed-in person may know about a doctor.
+// Admins also get contact and administrative details.
+function doctorDto(doctor, { admin = false } = {}) {
+  const dto = {
+    id: id(doctor),
+    firstName: doctor.user.firstName,
+    lastName: doctor.user.lastName,
+    fullName: `${doctor.user.firstName} ${doctor.user.lastName}`,
+    specialty: specialtyDto(doctor.specialty),
+  };
+  if (admin) {
+    Object.assign(dto, {
+      email: doctor.user.email,
+      phone: doctor.phone || '',
+      licenseNumber: doctor.licenseNumber,
+      active: doctor.user.active !== false,
+    });
+  }
+  return dto;
+}
+
+const slotDto = (slot) => ({ id: id(slot), start: slot.start.toISOString(), end: slot.end.toISOString() });
+
+module.exports = { userDto, specialtyDto, doctorDto, slotDto, id };

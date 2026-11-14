@@ -17,8 +17,8 @@ async function get(id) {
 }
 
 function translate(err) {
-  if (err.code === 11000) return new HttpError(409, 'Cette spécialité existe déjà.');
-  if (err.name === 'ValidationError') return new HttpError(422, 'Le nom de la spécialité est invalide.');
+  if (err.code === 11000) return new HttpError(409, 'Cette spécialité existe déjà.', 'name');
+  if (err.name === 'ValidationError') return new HttpError(422, 'Le nom de la spécialité est invalide.', 'name');
   return err;
 }
 

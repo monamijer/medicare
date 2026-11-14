@@ -59,3 +59,35 @@ Patient self-registration; the new patient is signed in.
 Body: `{ firstName, lastName, email, password (8+ chars), birthDate "YYYY-MM-DD", phone? }`
 `201 { "user": {...} }`. `409` if the email is taken, `422` for invalid fields.
 The role is always `patient`; a submitted `role` is ignored.
+
+## Specialties
+
+Reading needs a login (any role); writing is admin only.
+
+| Method and path | Role | Result |
+|---|---|---|
+| `GET /specialties` | any | `200 { specialties: [{ id, name }] }`, sorted in French order |
+| `GET /specialties/:id` | any | `200 { specialty }`, `404` |
+| `POST /specialties` `{ name }` | admin | `201 { specialty }`; `409` duplicate (case and accents ignored); `422` name not 2-80 characters |
+| `PUT /specialties/:id` `{ name }` | admin | `200 { specialty }`; `409`, `422`, `404` |
+| `DELETE /specialties/:id` | admin | `204`; `409` while a doctor uses it |
+
+## Doctors
+
+Any signed-in user sees a **public** view of active doctors:
+`{ id, firstName, lastName, fullName, specialty: { id, name } }`.
+Admins see more: `email`, `phone`, `licenseNumber`, `active`. Deactivated doctors are `404` for everyone but admins.
+
+| Method and path | Role | Result |
+|---|---|---|
+| `GET /doctors?specialty=<id>` | any | `200 { doctors: [...] }` sorted by name; `422` if `specialty` is not a valid id |
+| `GET /doctors/:id` | any | `200 { doctor }`, `404` |
+| `GET /doctors/:id/slots` | any | `200 { timezone, slots: [{ id, start, end }] }`: upcoming **free** slots, times in UTC ISO 8601; `timezone` is the clinic zone to display them in |
+| `POST /doctors` | admin | `201 { doctor }`; creates the doctor's login account too |
+| `PUT /doctors/:id` | admin | `200 { doctor }`; an empty `password` keeps the current one |
+| `DELETE /doctors/:id` | admin | `200 { result: "deleted" }` or `{ result: "deactivated" }` (history kept); `409` while upcoming appointments exist |
+| `POST /doctors/:id/reactivate` | admin | `200 { doctor }` |
+
+Body for `POST`/`PUT /doctors`:
+`{ firstName, lastName, email, password (8+ chars, optional on PUT), specialty (id), licenseNumber, phone? }`.
+`409` on a duplicate `email` or `licenseNumber` (see `error.fields`), `422` on invalid values.
