@@ -15,7 +15,11 @@ function errorHandler(err, req, res, next) {
   if (status === 500) console.error(err);
 
   if (req.originalUrl.startsWith('/api/')) {
-    return res.status(status).json({ error: { status, message } });
+    const body = { status, message };
+    if (err.type === 'entity.parse.failed') body.message = 'Corps de requête JSON invalide.';
+    const fields = err.fields || (err.field ? { [err.field]: err.message } : null);
+    if (fields) body.fields = fields;
+    return res.status(status).json({ error: body });
   }
   res.status(status).render('errors/error', { title: `Erreur ${status}`, status, message });
 }

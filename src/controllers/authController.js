@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const { establishSession } = require('../utils/session');
 const { firstError } = require('../validators/auth');
 
 function renderLogin(res, status, email, error) {
@@ -9,14 +10,13 @@ function showLogin(req, res) {
   renderLogin(res, 200, '', null);
 }
 
-// Starts a logged-in session. A new session id prevents session fixation.
 function startSession(req, res, next, user, welcome) {
-  req.session.regenerate((regenError) => {
-    if (regenError) return next(regenError);
-    req.session.user = { id: user.id, fullName: user.fullName, role: user.role };
-    if (welcome) req.flash('success', welcome);
-    return req.session.save((saveError) => (saveError ? next(saveError) : res.redirect('/')));
-  });
+  establishSession(req, user)
+    .then(() => {
+      if (welcome) req.flash('success', welcome);
+      res.redirect('/');
+    })
+    .catch(next);
 }
 
 async function login(req, res, next) {

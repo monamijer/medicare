@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const webRoutes = require('./routes/web');
+const apiRoutes = require('./routes/api');
 const { createSessionMiddleware } = require('./config/session');
 const flash = require('./middleware/flash');
 const viewLocals = require('./middleware/viewLocals');
@@ -15,13 +16,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
 app.use(createSessionMiddleware());
 app.use(flash);
 app.use(viewLocals);
+app.use('/api/v1', apiRoutes);
 app.use('/', webRoutes);
 
 app.use(notFound);

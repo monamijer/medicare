@@ -7,4 +7,11 @@ class HttpError extends Error {
   }
 }
 
+// 422 with several field messages: { fieldName: 'message' }.
+HttpError.validation = (fields) => {
+  const error = new HttpError(422, 'Les données envoyées sont invalides.');
+  error.fields = fields;
+  return error;
+};
+
 module.exports = HttpError;
