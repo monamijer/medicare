@@ -16,12 +16,14 @@ html(lang='fr', class=currentUser ? 'has-sidebar' : '')
     script(src='/js/forms.js', defer)
   body
     include ../partials/header
-    if currentUser
-      include ../partials/sidebar
-    .app-body
-      main.page
-        include ../partials/flash
-        block content
-      include ../partials/footer
+    .app-frame
+      if currentUser
+        include ../partials/sidebar
+      .app-body
+        .shell
+          main.page
+            include ../partials/flash
+            block content
+    include ../partials/footer
     if currentUser
       include ../partials/confirm-dialog
