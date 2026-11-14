@@ -4,8 +4,8 @@ function createClient(app) {
   const base = `http://127.0.0.1:${server.address().port}`;
   const jar = new Map();
 
-  async function request(path, { method = 'GET', form, json, raw, contentType } = {}) {
-    const headers = {};
+  async function request(path, { method = 'GET', form, json, raw, contentType, headers: extraHeaders } = {}) {
+    const headers = { ...extraHeaders };
     if (jar.size) headers.cookie = [...jar].map(([name, value]) => `${name}=${value}`).join('; ');
     let body;
     if (form) {
@@ -31,7 +31,7 @@ function createClient(app) {
     }
     const text = await res.text();
     const isJson = (res.headers.get('content-type') || '').includes('json');
-    return { status: res.status, location: res.headers.get('location'), setCookie, html: text, json: isJson && text ? JSON.parse(text) : null };
+    return { status: res.status, headers: res.headers, location: res.headers.get('location'), setCookie, html: text, json: isJson && text ? JSON.parse(text) : null };
   }
 
   function close() {
@@ -39,7 +39,7 @@ function createClient(app) {
     server.closeAllConnections();
   }
 
-  return { request, jar, close };
+  return { request, jar, close, base };
 }
 
 module.exports = { createClient };
