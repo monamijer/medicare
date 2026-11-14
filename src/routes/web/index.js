@@ -5,6 +5,7 @@ const doctorRoutes = require('./doctors');
 const patientRoutes = require('./patients');
 const accountRoutes = require('./account');
 const availabilityRoutes = require('./availability');
+const userRoutes = require('./users');
 const appointmentRoutes = require('./appointments');
 const { requireAuth } = require('../../middleware/auth');
 
@@ -14,6 +15,7 @@ router.use('/doctors', doctorRoutes);
 router.use('/patients', patientRoutes);
 router.use(accountRoutes);
 router.use('/availability', availabilityRoutes);
+router.use('/users', userRoutes);
 router.use('/appointments', appointmentRoutes);
 
 router.get('/', requireAuth, (req, res) => {

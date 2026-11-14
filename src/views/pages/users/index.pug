@@ -1,0 +1,49 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    div
+      h1 Utilisateurs
+      p.text-muted Tous les comptes de la clinique. Les médecins et les patients se gèrent depuis leur section.
+    a.btn.btn-primary(href='/users/new')
+      +icon('plus')
+      span Nouvel administrateur
+  .table-wrap
+    table.table
+      thead
+        tr
+          th(scope='col') Nom
+          th(scope='col') E-mail
+          th(scope='col') Rôle
+          th(scope='col') Statut
+          th.col-actions(scope='col') Action
+      tbody
+        each user in users
+          tr
+            td #{user.firstName} #{user.lastName}
+              if user.isSelf
+                span.text-muted  (vous)
+            td= user.email
+            td
+              if user.role === 'admin'
+                span.badge.badge-muted Administrateur
+              else if user.role === 'doctor'
+                span.badge.badge-muted Médecin
+              else
+                span.badge.badge-muted Patient
+            td
+              if user.active === false
+                span.badge.badge-danger Désactivé
+              else
+                span.badge.badge-success Actif
+            td.col-actions
+              if user.role === 'admin'
+                if user.active === false
+                  form(method='post', action=`/users/${user._id}/reactivate`)
+                    button.btn.btn-secondary.btn-sm(type='submit') Réactiver
+                else if !user.isSelf
+                  form(method='post', action=`/users/${user._id}/deactivate`, data-confirm=`Désactiver le compte de ${user.firstName} ${user.lastName} ? Cette personne ne pourra plus se connecter.`, data-confirm-title='Désactiver le compte', data-confirm-label='Désactiver')
+                    button.btn.btn-danger.btn-sm(type='submit') Désactiver
+              else if user.profileUrl
+                a.btn.btn-secondary.btn-sm(href=user.profileUrl) Voir la fiche

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const HttpError = require('../utils/httpError');
@@ -49,4 +50,37 @@ async function setActive(id, active) {
   if (!result.matchedCount) throw new HttpError(404, 'Utilisateur introuvable.');
 }
 
-module.exports = { createUser, updateUser, setActive, MIN_PASSWORD_LENGTH };
+const collator = new Intl.Collator('fr', { sensitivity: 'base' });
+
+async function listAll() {
+  const users = await User.find().lean();
+  return users.sort((a, b) => collator.compare(`${a.lastName} ${a.firstName}`, `${b.lastName} ${b.firstName}`));
+}
+
+// Admin accounts are switched on and off here. Doctors and patients are handled in their own sections
+// because their appointments must be taken into account.
+async function setAdminActive(actorId, id, active) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, 'Utilisateur introuvable.');
+  const target = await User.findById(id);
+  if (!target) throw new HttpError(404, 'Utilisateur introuvable.');
+  if (target.role !== 'admin') {
+    throw new HttpError(409, 'Les comptes des médecins et des patients se gèrent depuis leur section.');
+  }
+  if (!active) {
+    if (String(target._id) === String(actorId)) throw new HttpError(409, 'Vous ne pouvez pas désactiver votre propre compte.');
+    const otherActive = await User.countDocuments({ role: 'admin', active: true, _id: { $ne: target._id } });
+    if (!otherActive) throw new HttpError(409, 'Il doit rester au moins un administrateur actif.');
+  }
+  target.active = active;
+  await target.save();
+  // Two admins deactivating each other at the same instant would both pass the check above:
+  // verify afterwards and undo if nobody can sign in any more.
+  if (!active && (await User.countDocuments({ role: 'admin', active: true })) === 0) {
+    target.active = true;
+    await target.save();
+    throw new HttpError(409, 'Il doit rester au moins un administrateur actif.');
+  }
+  return target;
+}
+
+module.exports = { createUser, updateUser, setActive, listAll, setAdminActive, MIN_PASSWORD_LENGTH };

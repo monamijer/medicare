@@ -1,0 +1,21 @@
+extends ../../layouts/base
+include ../../partials/field
+
+block content
+  .page-header
+    h1 Nouvel administrateur
+  if errors.form
+    .alert.alert-danger(role='alert')
+      span.alert-text= errors.form
+  form.form(method='post', action='/users', data-loading-text='Création…')
+    +field('Prénom', 'firstName', values.firstName, errors, { type: 'text', required: true, maxlength: '60', autofocus: true })
+    +field('Nom', 'lastName', values.lastName, errors, { type: 'text', required: true, maxlength: '60' })
+    +field('Adresse e-mail (identifiant de connexion)', 'email', values.email, errors, { type: 'email', required: true, autocomplete: 'off' })
+    .field
+      label.label(for='password') Mot de passe (8 caractères minimum)
+      input#password.input(type='password', name='password', autocomplete='new-password', required, aria-invalid=errors.password ? 'true' : false, aria-describedby=errors.password ? 'password-error' : false)
+      if errors.password
+        p#password-error.field-error= errors.password
+    .form-actions
+      button.btn.btn-primary(type='submit') Créer l'administrateur
+      a.btn.btn-secondary(href='/users') Annuler
