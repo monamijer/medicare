@@ -9,7 +9,9 @@ const assets = path.join(root, 'src/public/assets');
 const ICONS = [
   'menu', 'heart-pulse', 'layout-dashboard', 'calendar-days', 'stethoscope',
   'users', 'user-round', 'tags', 'settings', 'clock', 'plus', 'log-out',
-  'circle-user', 'x', 'pencil', 'trash-2', 'circle-check', 'circle-alert', 'info', 'calendar-check',
+  'circle-user', 'calendar-plus', 'shield-check', 'arrow-up-right', 'calendar-heart',
+  'lock-keyhole', 'heart-handshake', 'clock-3', 'chevron-left', 'chevron-right',
+  'x', 'pencil', 'trash-2', 'circle-check', 'circle-alert', 'info', 'calendar-check',
 ];
 const FONT_WEIGHTS = [400, 500, 600];
 

@@ -1,18 +1,41 @@
 include icon
 
-header.app-header
-  if currentUser
-    button#sidebar-toggle.icon-btn(type='button', aria-controls='sidebar', aria-expanded='false', aria-label='Afficher ou masquer le menu')
-      +icon('menu')
-  a.brand(href='/')
-    +icon('heart-pulse')
-    span MediCare
-  if currentUser
-    .header-user
-      +icon('circle-user')
-      .header-user-text
-        span.header-user-name= currentUser.fullName
-        span.header-user-role= roleLabel
-      form(method='post', action='/logout')
-        button.icon-btn(type='submit', aria-label='Se déconnecter', title='Se déconnecter')
-          +icon('log-out')
+header.site-header
+  .header-main
+    if currentUser
+      button#sidebar-toggle.icon-btn.header-menu(type='button', aria-controls='sidebar', aria-expanded='false', aria-label='Afficher ou masquer le menu')
+        +icon('menu')
+    a.brand(href='/')
+      span.brand-mark
+        +icon('heart-pulse')
+      span.brand-name MediCare
+    .header-promise
+      +icon('shield-check')
+      span Votre santé, en toute confiance
+    if currentUser
+      .header-user
+        .user-avatar= currentUser.firstName ? currentUser.firstName.charAt(0).toUpperCase() : 'M'
+        .header-user-text
+          span.header-user-name= currentUser.fullName
+          span.header-user-role= roleLabel
+        form(method='post', action='/logout')
+          button.icon-btn(type='submit', aria-label='Se déconnecter', title='Se déconnecter')
+            +icon('log-out')
+  .header-subbar
+    .header-subbar-inner
+      if currentUser
+        span.header-welcome Bonjour, #{currentUser.firstName}
+        nav.header-quicklinks(aria-label='Liens rapides')
+          if currentUser.role === 'patient'
+            a(href='/appointments/new') Prendre rendez-vous
+            a(href='/appointments') Mes rendez-vous
+            a(href='/profile') Mon profil
+          else if currentUser.role === 'doctor'
+            a(href='/appointments/day') Mon agenda
+            a(href='/availability') Mes disponibilités
+          else
+            a(href='/appointments/day') Agenda
+            a(href='/doctors') Médecins
+            a(href='/patients') Patients
+      else
+        span.header-welcome Des soins mieux organisés, simplement.

@@ -3,13 +3,15 @@ html(lang='fr', class=currentUser ? 'has-sidebar' : '')
   head
     meta(charset='utf-8')
     meta(name='viewport', content='width=device-width, initial-scale=1')
+    meta(name='theme-color', content='#103b46')
+    meta(name='description', content='MediCare — gestion simple et sécurisée des rendez-vous médicaux.')
     title #{title ? title + ' | ' : ''}MediCare
     link(rel='stylesheet', href='/css/tokens.css')
     link(rel='stylesheet', href='/css/main.css')
     link(rel='stylesheet', href='/css/layout.css')
     link(rel='stylesheet', href='/css/components.css')
-    if currentUser
-      script(src='/js/shell.js')
+    script(src='/js/shell.js')
+    script(src='/js/carousel.js', defer)
     script(src='/js/ui.js', defer)
     script(src='/js/forms.js', defer)
   body

@@ -1,6 +1,177 @@
 extends ../layouts/base
 
 block content
-  .page-header
-    h1 Accueil
-  p.text-muted Choisissez une section dans le menu pour commencer.
+  include ../partials/icon
+  .home-page
+    section.home-hero(aria-labelledby='home-title')
+      .home-hero-copy
+        span.eyebrow Votre santé, notre priorité
+        h1#home-title Des soins plus simples, à chaque étape.
+        p Organisez vos rendez-vous, retrouvez vos informations et restez serein grâce à un espace de santé clair et sécurisé.
+        .hero-actions
+          if currentUser.role === 'patient'
+            a.btn.btn-light(href='/appointments/new')
+              +icon('calendar-plus')
+              span Prendre rendez-vous
+            a.hero-text-link(href='/appointments') Voir mes rendez-vous
+          else if currentUser.role === 'doctor'
+            a.btn.btn-light(href='/appointments/day')
+              +icon('calendar-check')
+              span Ouvrir mon agenda
+            a.hero-text-link(href='/availability') Gérer mes disponibilités
+          else
+            a.btn.btn-light(href='/appointments/day')
+              +icon('calendar-check')
+              span Consulter l'agenda
+            a.hero-text-link(href='/doctors') Gérer les médecins
+      .hero-art(aria-hidden='true')
+        .hero-orbit.orbit-one
+        .hero-orbit.orbit-two
+        .hero-cross +
+        .hero-card
+          .hero-card-icon
+            +icon('heart-pulse')
+          span.hero-card-label Un suivi en toute confiance
+          strong Des soins coordonnés
+          span.hero-card-status
+            i
+            | Votre espace est prêt
+
+    section.home-shortcuts(aria-label='Accès rapides')
+      if currentUser.role === 'patient'
+        a.shortcut-card(href='/appointments/new')
+          span.shortcut-icon
+            +icon('calendar-plus')
+          span
+            strong Réserver une consultation
+            small Trouvez un créneau qui vous convient
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/appointments')
+          span.shortcut-icon
+            +icon('calendar-days')
+          span
+            strong Mes rendez-vous
+            small Consultez et gérez vos réservations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/profile')
+          span.shortcut-icon
+            +icon('user-round')
+          span
+            strong Mon profil
+            small Gardez vos informations à jour
+          +icon('arrow-up-right')
+      else if currentUser.role === 'doctor'
+        a.shortcut-card(href='/appointments/day')
+          span.shortcut-icon
+            +icon('calendar-check')
+          span
+            strong Agenda du jour
+            small Retrouvez vos consultations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/appointments')
+          span.shortcut-icon
+            +icon('calendar-days')
+          span
+            strong Mes rendez-vous
+            small Consultez votre planning
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/availability')
+          span.shortcut-icon
+            +icon('clock')
+          span
+            strong Disponibilités
+            small Définissez vos créneaux
+          +icon('arrow-up-right')
+      else
+        a.shortcut-card(href='/appointments/day')
+          span.shortcut-icon
+            +icon('calendar-check')
+          span
+            strong Agenda du jour
+            small Vue globale des consultations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/doctors')
+          span.shortcut-icon
+            +icon('stethoscope')
+          span
+            strong Équipe médicale
+            small Gérez les profils médecins
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/patients')
+          span.shortcut-icon
+            +icon('users')
+          span
+            strong Dossiers patients
+            small Accédez aux dossiers
+          +icon('arrow-up-right')
+
+    section.home-featured(aria-labelledby='featured-title')
+      .section-heading
+        div
+          span.eyebrow À découvrir
+          h2#featured-title Prenez soin de vous, en toute simplicité
+        .carousel-controls
+          button.icon-btn(type='button', data-carousel-prev, aria-label='Conseil précédent')
+            +icon('chevron-left')
+          button.icon-btn(type='button', data-carousel-next, aria-label='Conseil suivant')
+            +icon('chevron-right')
+      .feature-carousel(data-carousel)
+        article.feature-slide.is-active
+          .feature-visual.feature-visual-teal(aria-hidden='true')
+            +icon('calendar-heart')
+            span 01
+          .feature-copy
+            span.feature-kicker Organisation
+            h3 Anticipez vos consultations
+            p Réservez votre créneau à l'avance et retrouvez les détails de vos rendez-vous au même endroit.
+            if currentUser.role === 'patient'
+              a.text-link(href='/appointments/new') Choisir un créneau
+            else
+              a.text-link(href='/appointments') Voir les rendez-vous
+        article.feature-slide(aria-hidden='true')
+          .feature-visual.feature-visual-blue(aria-hidden='true')
+            +icon('shield-check')
+            span 02
+          .feature-copy
+            span.feature-kicker Sérénité
+            h3 Vos informations, bien organisées
+            p Un espace dédié pour consulter les informations utiles et garder votre parcours de soins à portée de main.
+            if currentUser.role === 'patient'
+              a.text-link(href='/profile') Mettre à jour mon profil
+            else
+              a.text-link(href='/patients') Accéder aux patients
+        article.feature-slide(aria-hidden='true')
+          .feature-visual.feature-visual-sand(aria-hidden='true')
+            +icon('stethoscope')
+            span 03
+          .feature-copy
+            span.feature-kicker Coordination
+            h3 Une équipe à votre écoute
+            p Une meilleure visibilité sur les disponibilités facilite l'organisation des consultations.
+            if currentUser.role === 'patient'
+              a.text-link(href='/appointments/new') Trouver un médecin
+            else if currentUser.role === 'doctor'
+              a.text-link(href='/availability') Gérer mes créneaux
+            else
+              a.text-link(href='/doctors') Découvrir l'équipe
+      .carousel-dots(aria-label='Choisir un conseil')
+        button.is-active(type='button', data-carousel-dot='0', aria-label='Afficher le conseil 1', aria-current='true')
+        button(type='button', data-carousel-dot='1', aria-label='Afficher le conseil 2')
+        button(type='button', data-carousel-dot='2', aria-label='Afficher le conseil 3')
+
+    section.home-trust
+      .trust-item
+        +icon('lock-keyhole')
+        div
+          strong Espace sécurisé
+          span Vos accès sont personnels
+      .trust-item
+        +icon('heart-handshake')
+        div
+          strong Parcours simplifié
+          span Les informations essentielles réunies
+      .trust-item
+        +icon('clock-3')
+        div
+          strong Gain de temps
+          span Des démarches plus fluides

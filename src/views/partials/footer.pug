@@ -1,4 +1,38 @@
-footer.app-footer
-  span MediCare, gestion de rendez-vous médicaux
-  span © #{currentYear} MediCare
-  span Version #{appVersion}
+include icon
+footer.site-footer
+  .footer-main
+    .footer-brand
+      a.brand(href='/')
+        span.brand-mark
+          +icon('heart-pulse')
+        span.brand-name MediCare
+      p Un espace simple et sécurisé pour faciliter la gestion de vos rendez-vous médicaux.
+    .footer-column
+      h2 Navigation
+      a(href='/') Accueil
+      if currentUser
+        if currentUser.role === 'patient'
+          a(href='/appointments/new') Prendre rendez-vous
+          a(href='/appointments') Mes rendez-vous
+          a(href='/profile') Mon profil
+        else
+          a(href='/appointments') Rendez-vous
+          if currentUser.role === 'admin'
+            a(href='/doctors') Médecins
+            a(href='/patients') Patients
+    .footer-column
+      h2 Votre espace
+      if currentUser
+        span Connecté en tant que #{roleLabel.toLowerCase()}
+        form(method='post', action='/logout')
+          button.footer-logout(type='submit') Se déconnecter
+      else
+        a(href='/login') Se connecter
+        a(href='/register') Créer un compte
+    .footer-note
+      .footer-note-icon
+        +icon('heart-handshake')
+      span Prenez soin de vous. Nous nous occupons du reste.
+  .footer-bottom
+    span © #{currentYear} MediCare. Tous droits réservés.
+    span Version #{appVersion}
