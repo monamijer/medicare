@@ -36,6 +36,19 @@ function doctorDto(doctor, { admin = false } = {}) {
   return dto;
 }
 
+function patientDto(patient) {
+  return {
+    id: id(patient),
+    firstName: patient.user.firstName,
+    lastName: patient.user.lastName,
+    fullName: `${patient.user.firstName} ${patient.user.lastName}`,
+    email: patient.user.email,
+    birthDate: new Date(patient.birthDate).toISOString().slice(0, 10),
+    phone: patient.phone || '',
+    active: patient.user.active !== false,
+  };
+}
+
 const slotDto = (slot) => ({ id: id(slot), start: slot.start.toISOString(), end: slot.end.toISOString() });
 
-module.exports = { userDto, specialtyDto, doctorDto, slotDto, id };
+module.exports = { userDto, specialtyDto, doctorDto, patientDto, slotDto, id };

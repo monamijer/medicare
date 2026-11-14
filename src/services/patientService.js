@@ -49,6 +49,7 @@ async function create({ firstName, lastName, email, password, birthDate, phone }
 }
 
 async function update(id, { firstName, lastName, email, password, birthDate, phone }) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, NOT_FOUND);
   const patient = await Patient.findById(id);
   if (!patient) throw new HttpError(404, NOT_FOUND);
   const date = checkBirthDate(birthDate);

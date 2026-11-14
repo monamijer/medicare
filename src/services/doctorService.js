@@ -64,6 +64,7 @@ async function create({ firstName, lastName, email, password, specialty, license
 }
 
 async function update(id, { firstName, lastName, email, password, specialty, licenseNumber, phone }) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, NOT_FOUND);
   const doctor = await Doctor.findById(id);
   if (!doctor) throw new HttpError(404, NOT_FOUND);
   await assertSpecialtyExists(specialty);

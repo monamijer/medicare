@@ -47,7 +47,8 @@ test('every catalog endpoint needs a login; only admins may write', async () => 
   for (const path of ['/specialties', '/doctors', `/doctors/${cardio.id}`]) assert.strictEqual((await api(anonymous, 'GET', path)).status, 401, path);
   const patient = await patientClient();
   for (const [method, path] of [['POST', '/specialties'], ['PUT', `/specialties/${cardio.id}`], ['DELETE', `/specialties/${cardio.id}`], ['POST', '/doctors'], ['PUT', `/doctors/${cardio.id}`], ['DELETE', `/doctors/${cardio.id}`], ['POST', `/doctors/${cardio.id}/reactivate`]]) {
-    assert.strictEqual((await api(patient, method, path, { name: 'x' })).status, 403, `${method} ${path}`);
+    const payload = ['POST', 'PUT'].includes(method) ? { name: 'x' } : undefined;
+    assert.strictEqual((await api(patient, method, path, payload)).status, 403, `${method} ${path}`);
   }
   assert.strictEqual((await api(patient, 'GET', '/specialties')).status, 200);
 });
@@ -105,6 +106,15 @@ test('admin creates, reads, updates a doctor; the password never comes back', as
   assert.strictEqual((await api(admin, 'GET', `/doctors/${doctor.id}`)).json.doctor.licenseNumber, 'BI-1001');
   const login = await apiLogin(newClient(), 'awa@clinique.test'); // the doctor can sign in with the chosen password
   assert.strictEqual(login.json.user.role, 'doctor');
+});
+
+test('unknown or malformed doctor ids give 404 on every verb', async () => {
+  for (const id of ['64b7f0c2a1b2c3d4e5f60718', 'bad']) {
+    assert.strictEqual((await api(admin, 'GET', `/doctors/${id}`)).status, 404);
+    assert.strictEqual((await api(admin, 'PUT', `/doctors/${id}`, newDoctor())).status, 404);
+    assert.strictEqual((await api(admin, 'DELETE', `/doctors/${id}`)).status, 404);
+    assert.strictEqual((await api(admin, 'POST', `/doctors/${id}/reactivate`)).status, 404);
+  }
 });
 
 test('doctor validation and conflicts come back per field', async () => {

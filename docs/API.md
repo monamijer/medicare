@@ -91,3 +91,24 @@ Admins see more: `email`, `phone`, `licenseNumber`, `active`. Deactivated doctor
 Body for `POST`/`PUT /doctors`:
 `{ firstName, lastName, email, password (8+ chars, optional on PUT), specialty (id), licenseNumber, phone? }`.
 `409` on a duplicate `email` or `licenseNumber` (see `error.fields`), `422` on invalid values.
+
+## Patients
+
+Patient records contain personal data, so only admins can list or read other patients.
+Shape: `{ id, firstName, lastName, fullName, email, birthDate "YYYY-MM-DD", phone, active }`.
+
+| Method and path | Role | Result |
+|---|---|---|
+| `GET /patients/me` | patient | `200 { patient }` your own profile |
+| `PUT /patients/me` | patient | `200 { patient }`; same body as below; an empty `password` keeps the current one |
+| `GET /patients` | admin | `200 { patients: [...] }` sorted by name |
+| `GET /patients/:id` | admin | `200 { patient }`, `404` |
+| `POST /patients` | admin | `201 { patient }`; creates the patient's login account too |
+| `PUT /patients/:id` | admin | `200 { patient }` |
+| `DELETE /patients/:id` | admin | `200 { result: "deleted" }` or `{ result: "deactivated" }` (history kept); `409` while upcoming appointments exist |
+| `POST /patients/:id/reactivate` | admin | `200 { patient }` |
+
+Body for `POST`/`PUT`:
+`{ firstName, lastName, email, password (8+ chars, optional on PUT), birthDate "YYYY-MM-DD" (not in the future, 1900 or later), phone? }`.
+`409` on a duplicate `email`, `422` on invalid values (see `error.fields`).
+Staff (admin, doctor) have no patient profile: `/patients/me` is `403` for them.
