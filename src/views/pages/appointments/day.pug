@@ -1,0 +1,43 @@
+extends ../../layouts/base
+
+block content
+  .page-header
+    div
+      h1 Agenda du jour
+      p.text-muted.capitalize= label
+  .day-nav
+    a.btn.btn-secondary.btn-sm(href=`/appointments/day?date=${previous}`) ← Jour précédent
+    if isToday
+      span.btn.btn-secondary.btn-sm.is-disabled(aria-current='date') Aujourd'hui
+    else
+      a.btn.btn-secondary.btn-sm(href='/appointments/day') Aujourd'hui
+    a.btn.btn-secondary.btn-sm(href=`/appointments/day?date=${next}`) Jour suivant →
+    form.day-form(method='get', action='/appointments/day')
+      label.visually-hidden(for='date') Choisir une date
+      input#date.input(type='date', name='date', value=date, required)
+      button.btn.btn-primary.btn-sm(type='submit') Afficher
+  if appointments.length
+    p.text-muted #{appointments.length} rendez-vous
+    .table-wrap
+      table.table
+        thead
+          tr
+            th(scope='col') Heure
+            if role === 'admin'
+              th(scope='col') Médecin
+            th(scope='col') Patient
+            th(scope='col') Motif
+        tbody
+          each item in appointments
+            tr
+              td #{formatTime(item.start)} – #{formatTime(item.end)}
+              if role === 'admin'
+                td #{item.doctor.user.firstName} #{item.doctor.user.lastName}
+              td #{item.patient.user.firstName} #{item.patient.user.lastName}
+              td= item.reason || '-'
+  else
+    .empty-state
+      h2 Aucun rendez-vous
+      p Aucun rendez-vous confirmé n'est prévu ce jour-là.
+  p.section-title
+    a(href='/appointments') Voir tous les rendez-vous

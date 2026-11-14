@@ -6,6 +6,7 @@ const { bookRules, modifyRules } = require('../../validators/appointment');
 router.use(requireAuth);
 
 router.get('/', controller.index);
+router.get('/day', requireRole('doctor', 'admin'), controller.day);
 
 // Booking is for patients only.
 router.get('/new', requireRole('patient'), controller.search);

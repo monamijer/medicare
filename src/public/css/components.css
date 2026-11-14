@@ -76,3 +76,9 @@ textarea.input { min-height: 5rem; resize: vertical; }
 .slot-choice input:hover + label { background: var(--color-primary-soft); }
 .slot-choice input:checked + label { color: var(--color-on-primary); background: var(--color-primary); }
 .slot-choice input:focus-visible + label { box-shadow: var(--focus-ring); }
+
+.day-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }
+.day-form { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 0 var(--space-3); }
+.day-form .input { width: auto; padding: var(--space-1) var(--space-2); }
+.is-disabled { opacity: 0.55; cursor: default; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

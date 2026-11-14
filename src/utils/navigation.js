@@ -7,6 +7,7 @@ const ROLE_LABELS = {
 const NAVIGATION = {
   admin: [
     { href: '/', label: 'Accueil', icon: 'layout-dashboard' },
+    { href: '/appointments/day', label: 'Agenda du jour', icon: 'calendar-check' },
     { href: '/appointments', label: 'Rendez-vous', icon: 'calendar-days' },
     { href: '/doctors', label: 'Médecins', icon: 'stethoscope' },
     { href: '/patients', label: 'Patients', icon: 'users' },
@@ -16,6 +17,7 @@ const NAVIGATION = {
   ],
   doctor: [
     { href: '/', label: 'Accueil', icon: 'layout-dashboard' },
+    { href: '/appointments/day', label: 'Agenda du jour', icon: 'calendar-check' },
     { href: '/appointments', label: 'Mes rendez-vous', icon: 'calendar-days' },
     { href: '/availability', label: 'Mes disponibilités', icon: 'clock' },
   ],

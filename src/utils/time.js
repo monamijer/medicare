@@ -45,4 +45,19 @@ function formatDay(instant, tz) {
   }).format(instant);
 }
 
-module.exports = { zonedToUtc, toLocalParts, formatTime, formatDay, dayKey };
+// 'YYYY-MM-DD' shifted by n calendar days (pure calendar arithmetic, no time zone involved).
+function addDays(date, n) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+const today = (tz) => toLocalParts(new Date(), tz).date;
+
+// [start, end) of a clinic-local calendar day as UTC instants, or null if the date is invalid.
+function dayRange(date, tz) {
+  const start = zonedToUtc(date, '00:00', tz);
+  const end = start && zonedToUtc(addDays(date, 1), '00:00', tz);
+  return start && end ? { start, end } : null;
+}
+
+module.exports = { zonedToUtc, toLocalParts, formatTime, formatDay, dayKey, addDays, today, dayRange };

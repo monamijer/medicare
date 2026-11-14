@@ -4,7 +4,7 @@ const doctorService = require('../services/doctorService');
 const specialtyService = require('../services/specialtyService');
 const { fieldErrors } = require('../validators/common');
 const { groupSlotsByDay } = require('../utils/slotGroups');
-const { formatDay, formatTime } = require('../utils/time');
+const { formatDay, formatTime, zonedToUtc, addDays, today, dayRange } = require('../utils/time');
 
 const doctorName = (doctor) => `${doctor.user.firstName} ${doctor.user.lastName}`;
 
@@ -128,4 +128,25 @@ async function modify(req, res) {
   }
 }
 
-module.exports = { search, doctorSlots, bookForm, book, index, cancel, modifyForm, modify };
+// Daily agenda for doctors (their own) and admins (everyone).
+async function day(req, res) {
+  const requested = req.query.date;
+  const date = requested === undefined || requested === '' ? today() : requested; // empty field = today
+  if (typeof date !== 'string' || !dayRange(date)) {
+    req.flash('danger', 'Date invalide.');
+    return res.redirect('/appointments/day');
+  }
+  const appointments = await appointmentService.listForDay(req.session.user, date);
+  return res.render('pages/appointments/day', {
+    title: 'Agenda du jour',
+    date,
+    label: formatDay(zonedToUtc(date, '12:00')),
+    previous: addDays(date, -1),
+    next: addDays(date, 1),
+    isToday: date === today(),
+    appointments,
+    role: req.session.user.role,
+  });
+}
+
+module.exports = { search, doctorSlots, bookForm, book, index, cancel, modifyForm, modify, day };

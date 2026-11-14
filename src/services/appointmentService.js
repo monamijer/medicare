@@ -4,6 +4,7 @@ const AvailabilitySlot = require('../models/AvailabilitySlot');
 const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
 const HttpError = require('../utils/httpError');
+const { dayRange } = require('../utils/time');
 
 const UNAVAILABLE = "Ce créneau n'est plus disponible.";
 
@@ -93,6 +94,18 @@ async function listFor(user) {
     upcoming: all.filter(isUpcoming).sort((a, b) => a.start - b.start),
     history: all.filter((a) => !isUpcoming(a)).sort((a, b) => b.start - a.start),
   };
+}
+
+// Confirmed appointments of one clinic-local day (doctors: their own, admins: all), by time.
+async function listForDay(user, date) {
+  const range = dayRange(date);
+  if (!range) throw new HttpError(422, 'Date invalide.');
+  const filter = await ownerFilter(user);
+  if (!filter) return [];
+  const rows = await populateAll(
+    Appointment.find({ ...filter, status: 'confirmed', start: { $gte: range.start, $lt: range.end } }).sort({ start: 1 })
+  ).lean();
+  return rows.filter((a) => a.doctor && a.patient);
 }
 
 // Loads an appointment the user owns. Other people's appointments look like they do not exist.
@@ -196,4 +209,4 @@ async function modify(user, id, { slotId, reason = '' }) {
   return moved;
 }
 
-module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel, getForModify, modify };
+module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel, getForModify, modify, listForDay };
