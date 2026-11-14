@@ -137,3 +137,39 @@ covering the whole range; at most 48 slots per request; a leftover shorter than 
 
 Rules: a doctor's slots never overlap (`409` with `fields.date` naming the clash; touching slots are fine); a booked slot
 cannot be moved or deleted (`409`, cancel its appointment first); no slots for a deactivated doctor (`409`).
+
+## Appointments
+
+Appointment shape:
+
+```json
+{
+  "id": "...", "start": "2027-03-10T07:00:00.000Z", "end": "2027-03-10T07:30:00.000Z",
+  "status": "confirmed", "reason": "Douleurs", "cancelledAt": null, "cancelledBy": null,
+  "doctor": { "id": "...", "firstName": "...", "lastName": "...", "fullName": "...", "specialty": { "id": "...", "name": "..." } },
+  "patient": { "id": "...", "firstName": "...", "lastName": "...", "fullName": "..." }
+}
+```
+
+`status` is `confirmed` or `cancelled`; `cancelledBy` is `patient`, `doctor` or `admin`. Times are UTC; list responses
+carry `timezone` (the clinic zone). Doctors appear with their public view only.
+You only ever see your own appointments (patients: theirs, doctors: theirs, admins: all); anything else is `404`.
+
+| Method and path | Role | Result |
+|---|---|---|
+| `GET /appointments` | any | `200 { timezone, upcoming: [...], history: [...] }`; `history` = past and cancelled ones |
+| `GET /appointments/day?date=YYYY-MM-DD` | doctor, admin | `200 { timezone, date, appointments: [...] }`: confirmed appointments of that clinic-local day by time; `date` defaults to today; `422` for an invalid date |
+| `GET /appointments/:id` | any | `200 { appointment }`, `404` |
+| `POST /appointments` `{ slot, reason? }` | patient | `201 { appointment }`; the slot is booked atomically |
+| `PUT /appointments/:id` `{ slot?, reason? }` | patient, admin | `200 { appointment }`; omit `slot` to keep it, omit `reason` to keep it |
+| `POST /appointments/:id/cancel` | any owner, admin | `200 { appointment }`; the slot becomes free again |
+
+Booking and modification rules (all return `409` with `fields.slot` unless noted):
+
+- a slot that is taken, past, or belongs to a deactivated doctor is "plus disponible"; unknown slot ids are `404`, malformed ones `422`;
+- a patient cannot hold two appointments at the same time;
+- modification keeps the **same doctor** (`422` for another doctor's slot; to change doctor, cancel and book again);
+- cancelled or past appointments cannot be modified or cancelled (`409`);
+- simultaneous requests never double-book a slot: with several patients racing for one slot, exactly one gets `201`.
+
+`reason` is optional text of at most 300 characters (`422` beyond that).

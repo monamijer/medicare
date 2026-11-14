@@ -42,7 +42,7 @@ async function getBookableSlot(slotId) {
   if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
   const slot = await AvailabilitySlot.findById(slotId).lean();
   if (!slot) throw new HttpError(404, 'Créneau introuvable.');
-  if (slot.status !== 'free' || slot.start <= new Date() || !(await isDoctorActive(slot.doctor))) throw new HttpError(409, UNAVAILABLE);
+  if (slot.status !== 'free' || slot.start <= new Date() || !(await isDoctorActive(slot.doctor))) throw new HttpError(409, UNAVAILABLE, 'slot');
   return slot;
 }
 
@@ -52,10 +52,10 @@ async function book(userId, slotId, reason = '') {
   if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
   const wanted = await AvailabilitySlot.findById(slotId).lean();
   if (!wanted) throw new HttpError(404, 'Créneau introuvable.');
-  if (!(await isDoctorActive(wanted.doctor))) throw new HttpError(409, UNAVAILABLE);
+  if (!(await isDoctorActive(wanted.doctor))) throw new HttpError(409, UNAVAILABLE, 'slot');
 
   if (await Appointment.exists({ patient: patient._id, status: 'confirmed', start: { $lt: wanted.end }, end: { $gt: wanted.start } })) {
-    throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.');
+    throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.', 'slot');
   }
 
   // Atomic claim: only one request can flip the slot from free to booked.
@@ -64,7 +64,7 @@ async function book(userId, slotId, reason = '') {
     { status: 'booked' },
     { returnDocument: 'after' }
   );
-  if (!slot) throw new HttpError(409, UNAVAILABLE);
+  if (!slot) throw new HttpError(409, UNAVAILABLE, 'slot');
 
   try {
     return await Appointment.create({
@@ -72,7 +72,7 @@ async function book(userId, slotId, reason = '') {
     });
   } catch (err) {
     await AvailabilitySlot.updateOne({ _id: slot._id }, { status: 'free' }); // give the slot back
-    if (err.code === 11000) throw new HttpError(409, UNAVAILABLE);
+    if (err.code === 11000) throw new HttpError(409, UNAVAILABLE, 'slot');
     if (err.name === 'ValidationError') throw new HttpError(422, 'Les informations du rendez-vous sont invalides.');
     throw err;
   }
@@ -128,6 +128,14 @@ async function loadOwned(user, id) {
   return appointment;
 }
 
+// One appointment with doctor and patient details (404 if it is not the user's).
+async function getOne(user, id) {
+  await loadOwned(user, id);
+  const appointment = await populateAll(Appointment.findById(id)).lean();
+  if (!appointment || !appointment.doctor || !appointment.patient) throw new HttpError(404, 'Rendez-vous introuvable.');
+  return appointment;
+}
+
 function assertModifiable(appointment) {
   if (appointment.status === 'cancelled') throw new HttpError(409, 'Ce rendez-vous est annulé : il ne peut plus être modifié.');
   if (appointment.start <= new Date()) throw new HttpError(409, 'Ce rendez-vous est passé : il ne peut plus être modifié.');
@@ -176,7 +184,7 @@ async function modify(user, id, { slotId, reason = '' }) {
   const appointment = await loadOwned(user, id);
   assertModifiable(appointment);
 
-  if (String(slotId) === String(appointment.slot)) {
+  if (slotId === undefined || String(slotId) === String(appointment.slot)) {
     const updated = await Appointment.findOneAndUpdate({ _id: id, status: 'confirmed', slot: appointment.slot }, { reason }, { returnDocument: 'after', runValidators: true });
     if (!updated) throw new HttpError(409, "Ce rendez-vous n'est plus modifiable.");
     return updated;
@@ -184,12 +192,12 @@ async function modify(user, id, { slotId, reason = '' }) {
 
   if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
   const wanted = await AvailabilitySlot.findById(slotId).lean();
-  if (!wanted) throw new HttpError(409, UNAVAILABLE); // e.g. the doctor deleted it while the page was open
+  if (!wanted) throw new HttpError(409, UNAVAILABLE, 'slot'); // e.g. the doctor deleted it while the page was open
   if (String(wanted.doctor) !== String(appointment.doctor)) {
     throw new HttpError(422, 'Choisissez un créneau du même médecin. Pour un autre médecin, annulez puis reprenez rendez-vous.');
   }
   if (await Appointment.exists({ _id: { $ne: id }, patient: appointment.patient, status: 'confirmed', start: { $lt: wanted.end }, end: { $gt: wanted.start } })) {
-    throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.');
+    throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.', 'slot');
   }
 
   const claimed = await AvailabilitySlot.findOneAndUpdate(
@@ -197,7 +205,7 @@ async function modify(user, id, { slotId, reason = '' }) {
     { status: 'booked' },
     { returnDocument: 'after' }
   );
-  if (!claimed) throw new HttpError(409, UNAVAILABLE);
+  if (!claimed) throw new HttpError(409, UNAVAILABLE, 'slot');
 
   let moved;
   try {
@@ -208,7 +216,7 @@ async function modify(user, id, { slotId, reason = '' }) {
     );
   } catch (err) {
     await releaseSlot(claimed._id);
-    throw err.code === 11000 ? new HttpError(409, UNAVAILABLE) : err;
+    throw err.code === 11000 ? new HttpError(409, UNAVAILABLE, 'slot') : err;
   }
   if (!moved) {
     await releaseSlot(claimed._id); // cancelled or moved by someone else in the meantime
@@ -218,4 +226,4 @@ async function modify(user, id, { slotId, reason = '' }) {
   return moved;
 }
 
-module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel, getForModify, modify, listForDay };
+module.exports = { searchDoctors, listFreeSlots, getBookableSlot, book, listFor, cancel, getForModify, modify, listForDay, getOne };

@@ -12,5 +12,6 @@ router.use('/specialties', require('./specialties'));
 router.use('/doctors', require('./doctors'));
 router.use('/patients', require('./patients'));
 router.use('/availability', require('./availability'));
+router.use('/appointments', require('./appointments'));
 
 module.exports = router;
