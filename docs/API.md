@@ -112,3 +112,28 @@ Body for `POST`/`PUT`:
 `{ firstName, lastName, email, password (8+ chars, optional on PUT), birthDate "YYYY-MM-DD" (not in the future, 1900 or later), phone? }`.
 `409` on a duplicate `email`, `422` on invalid values (see `error.fields`).
 Staff (admin, doctor) have no patient profile: `/patients/me` is `403` for them.
+
+## Availability (slots)
+
+For doctors (their own slots) and admins (any doctor's). Patients get `403`.
+A doctor always works on their own slots; an admin names the doctor with `?doctor=<id>` (or a `doctor` field in the body),
+otherwise `422` with `fields.doctor`.
+
+Times are UTC ISO 8601. `timezone` (the clinic zone) tells you how to display them.
+Slot shape: `{ id, start, end, status }` with `status` `free` or `booked`.
+
+| Method and path | Result |
+|---|---|
+| `GET /availability` | `200 { timezone, doctor: { id, fullName }, slots: [...] }`: upcoming slots, earliest first |
+| `POST /availability` | `201 { created: <count> }` |
+| `GET /availability/:id` | `200 { slot }`, `404` (also for another doctor's slot) |
+| `PUT /availability/:id` | `200 { slot }`: moves a **free** slot |
+| `DELETE /availability/:id` | `204`: deletes a **free** slot |
+
+`POST` body: `{ date "YYYY-MM-DD" (clinic time, in the future), from "HH:mm", to "HH:mm", duration? }`.
+The range is cut into back-to-back slots of `duration` minutes (15, 20, 30, 45 or 60; default 30; `0` = one single slot
+covering the whole range; at most 48 slots per request; a leftover shorter than `duration` is dropped).
+`PUT` body: `{ date, from, to }`.
+
+Rules: a doctor's slots never overlap (`409` with `fields.date` naming the clash; touching slots are fine); a booked slot
+cannot be moved or deleted (`409`, cancel its appointment first); no slots for a deactivated doctor (`409`).

@@ -51,4 +51,7 @@ function patientDto(patient) {
 
 const slotDto = (slot) => ({ id: id(slot), start: slot.start.toISOString(), end: slot.end.toISOString() });
 
-module.exports = { userDto, specialtyDto, doctorDto, patientDto, slotDto, id };
+// A doctor's own view of a slot also shows whether it is taken.
+const availabilitySlotDto = (slot) => ({ ...slotDto(slot), status: slot.status });
+
+module.exports = { userDto, specialtyDto, doctorDto, patientDto, slotDto, availabilitySlotDto, id };

@@ -12,4 +12,10 @@ const createRules = [
 ];
 const updateRules = [dateRule, fromRule, toRule];
 
-module.exports = { createRules, updateRules, DURATIONS };
+// API: the slot length is optional and defaults to 30 minutes.
+const apiCreateRules = [
+  dateRule, fromRule, toRule,
+  body('duration').optional().isIn(DURATIONS).withMessage('Choisissez une durée de créneau (0, 15, 20, 30, 45 ou 60 minutes).'),
+];
+
+module.exports = { createRules, updateRules, apiCreateRules, DURATIONS };
