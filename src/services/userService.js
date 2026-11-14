@@ -2,7 +2,8 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const HttpError = require('../utils/httpError');
 
-const SALT_ROUNDS = 10;
+const config = require('../config/env');
+
 const MIN_PASSWORD_LENGTH = 8;
 
 function checkPassword(password) {
@@ -19,7 +20,7 @@ function translate(err) {
 
 async function createUser({ email, password, role, firstName, lastName }) {
   checkPassword(password);
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   try {
     return await User.create({ email, passwordHash, role, firstName, lastName });
   } catch (err) {
@@ -33,7 +34,7 @@ async function updateUser(id, { email, password, firstName, lastName }) {
   if (!user) throw new HttpError(404, 'Utilisateur introuvable.');
   if (password) {
     checkPassword(password);
-    user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    user.passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   }
   Object.assign(user, { email, firstName, lastName });
   try {

@@ -2,6 +2,7 @@
 // Each test process gets its own throw-away database, dropped at the end.
 process.env.NODE_ENV = 'test';
 process.env.SESSION_SECRET = 'test-secret';
+process.env.BCRYPT_ROUNDS = '4'; // cheapest allowed hashing: the suite creates many accounts
 const dbName = `medicare_test_${process.pid}`;
 process.env.MONGODB_URI = `mongodb://127.0.0.1:27017/${dbName}`;
 
