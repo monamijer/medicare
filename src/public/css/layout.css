@@ -11,7 +11,7 @@
    ├── footer.site-footer        full width (sibling of .app-frame)
    └── dialog#confirm-dialog     top layer
 
-   Drawer state: a `.sidebar-open` class on <body> (or <html>).
+   Sidebar state is owned by shell.js: <html data-sidebar="open|closed">.
    ============================================================ */
 
 :root {
@@ -258,8 +258,10 @@ body {
   font-size: var(--fs-xs);
 }
 
-/* ---------- 5. Tablet & mobile (< 1024px): sidebar = drawer ---------- */
-@media (max-width: 1023.98px) {
+/* ---------- 5. Below 62rem: sidebar = drawer ----------
+   State is owned by shell.js: <html data-sidebar="open|closed">.
+   62rem MUST match the matchMedia('(min-width: 62rem)') query in shell.js. */
+@media (max-width: 61.99rem) {
   .header-promise { display: none; }
 
   .sidebar {
@@ -276,10 +278,10 @@ body {
     border-right: 1px solid var(--border);
     box-shadow: var(--shadow-lg);
     transform: translateX(-100%);
-    visibility: hidden;         /* hidden drawer is not focusable */
+    visibility: hidden;         /* a closed drawer is not focusable */
     transition: transform var(--dur) var(--ease), visibility 0s linear var(--dur);
   }
-  .sidebar-open .sidebar {
+  [data-sidebar='open'] .sidebar {
     transform: none;
     visibility: visible;
     transition: transform var(--dur) var(--ease), visibility 0s;
@@ -294,13 +296,13 @@ body {
     visibility: hidden;
     transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur);
   }
-  .sidebar-open .sidebar-backdrop {
+  [data-sidebar='open'] .sidebar-backdrop {
     opacity: 1;
     visibility: visible;
     transition: opacity var(--dur) var(--ease), visibility 0s;
   }
 
-  .sidebar-open { overflow: hidden; }   /* lock page scroll while the drawer is open */
+  html[data-sidebar='open'] { overflow: hidden; }   /* lock page scroll while the drawer is open */
 }
 
 @media (max-width: 767.98px) {
@@ -330,9 +332,10 @@ body {
   .footer-bottom { padding-inline: var(--sp-6); }
 }
 
-/* ---------- 7. Desktop (>= 1024px): sidebar = in-flow rail ---------- */
-@media (min-width: 1024px) {
-  .header-menu { display: none; }
+/* ---------- 7. Desktop (>= 62rem): sidebar = in-flow rail ----------
+   The hamburger stays visible: on desktop shell.js uses it to collapse/expand the rail
+   (data-sidebar="closed" hides it, and the choice is remembered). */
+@media (min-width: 62rem) {
   .sidebar-backdrop { display: none; }
 
   .sidebar {
@@ -342,6 +345,8 @@ body {
     background: var(--surface);
     border-right: 1px solid var(--border);
   }
+  [data-sidebar='closed'] .sidebar { display: none; }
+
   /* The rail (aside) stretches to the full height of .app-frame;
      the menu inside it sticks under the header while the page scrolls. */
   .sidebar nav {

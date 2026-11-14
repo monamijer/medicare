@@ -1,0 +1,52 @@
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 Utilisateurs
+    a.btn.btn-primary(href='/users/new')
+      +icon('plus')
+      span Nouvel administrateur
+  .table-wrap
+    table.table
+      thead
+        tr
+          th(scope='col') Nom
+          th(scope='col') E-mail
+          th(scope='col') Rôle
+          th(scope='col') Statut
+          th.col-actions(scope='col') Actions
+      tbody
+        each account in users
+          - const isSelf = String(account._id) === currentUser.id
+          tr
+            td
+              | #{account.firstName} #{account.lastName}
+              if isSelf
+                |  
+                span.badge.badge-info Vous
+            td= account.email
+            td
+              span.badge.badge-role= roleLabels[account.role]
+            td
+              if account.active === false
+                span.badge.badge-muted Désactivé
+              else
+                span.badge.badge-success Actif
+            td.col-actions
+              if account.role === 'admin'
+                .table-actions
+                  a.btn.btn-secondary.btn-sm(href=`/users/${account._id}/edit`)
+                    +icon('pencil')
+                    span Modifier
+                  if account.active === false
+                    form(method='post', action=`/users/${account._id}/reactivate`)
+                      button.btn.btn-secondary.btn-sm(type='submit') Réactiver
+                  else if !isSelf
+                    form(method='post', action=`/users/${account._id}/deactivate`, data-confirm=`Désactiver le compte de ${account.firstName} ${account.lastName} ? Cette personne ne pourra plus se connecter.`, data-confirm-title='Désactiver le compte', data-confirm-label='Désactiver')
+                      button.btn.btn-danger.btn-sm(type='submit')
+                        span Désactiver
+              else if account.role === 'doctor'
+                a.text-link(href='/doctors') Gérer dans Médecins
+              else
+                a.text-link(href='/patients') Gérer dans Patients

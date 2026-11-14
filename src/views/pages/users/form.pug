@@ -1,0 +1,21 @@
+extends ../../layouts/base
+include ../../partials/field
+
+block content
+  .page-header
+    h1= account ? "Modifier l'administrateur" : 'Nouvel administrateur'
+  if errors.form
+    .alert.alert-danger(role='alert')
+      span.alert-text= errors.form
+  form.form(method='post', action=account ? `/users/${account._id}` : '/users', data-loading-text='Enregistrement…')
+    +field('Prénom', 'firstName', values.firstName, errors, { type: 'text', required: true, maxlength: '60' })
+    +field('Nom', 'lastName', values.lastName, errors, { type: 'text', required: true, maxlength: '60' })
+    +field('Adresse e-mail (identifiant de connexion)', 'email', values.email, errors, { type: 'email', required: true, autocomplete: 'email' })
+    .field
+      label.label(for='password')= account ? 'Nouveau mot de passe (laisser vide pour le conserver)' : 'Mot de passe (8 caractères minimum)'
+      input#password.input(type='password', name='password', autocomplete='new-password', required=!account, aria-invalid=errors.password ? 'true' : false, aria-describedby=errors.password ? 'password-error' : false)
+      if errors.password
+        p#password-error.field-error= errors.password
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer
+      a.btn.btn-secondary(href='/users') Annuler

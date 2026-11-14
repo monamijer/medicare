@@ -1,0 +1,1430 @@
+===== FILE: src/public/js/shell.js =====
+// Sidebar behaviour. Loaded in <head> so the initial state is set before first paint.
+(function () {
+  var root = document.documentElement;
+  var KEY = 'medicare.sidebar';
+  var desktop = window.matchMedia('(min-width: 62rem)');
+
+  function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+  function write(value) { try { localStorage.setItem(KEY, value); } catch (e) { /* storage unavailable */ } }
+
+  // Desktop remembers the choice (open by default); mobile always starts closed.
+  function initialState() { return desktop.matches && read() !== 'closed' ? 'open' : 'closed'; }
+
+  root.dataset.sidebar = initialState();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var toggle = document.getElementById('sidebar-toggle');
+    var backdrop = document.getElementById('sidebar-backdrop');
+    if (!toggle) return;
+
+    function set(state) {
+      root.dataset.sidebar = state;
+      toggle.setAttribute('aria-expanded', String(state === 'open'));
+      if (desktop.matches) write(state);
+    }
+
+    toggle.setAttribute('aria-expanded', String(root.dataset.sidebar === 'open'));
+    toggle.addEventListener('click', function () {
+      set(root.dataset.sidebar === 'open' ? 'closed' : 'open');
+    });
+    if (backdrop) backdrop.addEventListener('click', function () { set('closed'); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !desktop.matches && root.dataset.sidebar === 'open') {
+        set('closed');
+        toggle.focus();
+      }
+    });
+    desktop.addEventListener('change', function () {
+      root.dataset.sidebar = initialState();
+      toggle.setAttribute('aria-expanded', String(root.dataset.sidebar === 'open'));
+    });
+  });
+})();
+
+===== FILE: src/public/js/carousel.js =====
+// Accessible, dependency-free carousel for the home page.
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    var carousel = document.querySelector('[data-carousel]');
+    if (!carousel) return;
+    var slides = Array.from(carousel.querySelectorAll('.feature-slide'));
+    var dots = Array.from(document.querySelectorAll('[data-carousel-dot]'));
+    var current = 0;
+    function show(index) {
+      current = (index + slides.length) % slides.length;
+      slides.forEach(function (slide, i) {
+        var active = i === current;
+        slide.classList.toggle('is-active', active);
+        slide.setAttribute('aria-hidden', String(!active));
+      });
+      dots.forEach(function (dot, i) {
+        var active = i === current;
+        dot.classList.toggle('is-active', active);
+        if (active) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+    }
+    var previous = document.querySelector('[data-carousel-prev]');
+    var next = document.querySelector('[data-carousel-next]');
+    if (previous) previous.addEventListener('click', function () { show(current - 1); });
+    if (next) next.addEventListener('click', function () { show(current + 1); });
+    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i); }); });
+    show(0);
+  });
+})();
+
+===== FILE: src/public/js/ui.js =====
+// Notifications (dismiss, auto-dismiss) and confirmation dialog for forms with data-confirm.
+// Must be loaded before forms.js so a pending confirmation cancels the loading state.
+(function () {
+  document.addEventListener('click', function (event) {
+    var close = event.target.closest('[data-dismiss]');
+    if (!close) return;
+    var alert = close.closest('.alert');
+    if (alert) alert.remove();
+  });
+
+  document.querySelectorAll('.alert[data-autodismiss]').forEach(function (alert) {
+    setTimeout(function () { alert.remove(); }, 6000);
+  });
+
+  var dialog = document.getElementById('confirm-dialog');
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  var pending = null;
+
+  document.addEventListener('submit', function (event) {
+    var form = event.target;
+    if (!form.dataset.confirm || form.dataset.confirmed) return;
+    event.preventDefault();
+    pending = form;
+    document.getElementById('confirm-title').textContent = form.dataset.confirmTitle || 'Confirmer';
+    document.getElementById('confirm-message').textContent = form.dataset.confirm;
+    document.getElementById('confirm-accept').textContent = form.dataset.confirmLabel || 'Confirmer';
+    dialog.returnValue = '';
+    dialog.showModal();
+  });
+
+  dialog.addEventListener('close', function () {
+    var form = pending;
+    pending = null;
+    if (dialog.returnValue !== 'confirm' || !form) return;
+    form.dataset.confirmed = 'true';
+    if (form.requestSubmit) form.requestSubmit();
+    else form.submit();
+  });
+})();
+
+===== FILE: src/views/pages/home.pug =====
+extends ../layouts/base
+
+block content
+  include ../partials/icon
+  .home-page
+    section.home-hero(aria-labelledby='home-title')
+      .home-hero-copy
+        span.eyebrow Votre santé, notre priorité
+        h1#home-title Des soins plus simples, à chaque étape.
+        p Organisez vos rendez-vous, retrouvez vos informations et restez serein grâce à un espace de santé clair et sécurisé.
+        .hero-actions
+          if currentUser.role === 'patient'
+            a.btn.btn-light(href='/appointments/new')
+              +icon('calendar-plus')
+              span Prendre rendez-vous
+            a.hero-text-link(href='/appointments') Voir mes rendez-vous
+          else if currentUser.role === 'doctor'
+            a.btn.btn-light(href='/appointments/day')
+              +icon('calendar-check')
+              span Ouvrir mon agenda
+            a.hero-text-link(href='/availability') Gérer mes disponibilités
+          else
+            a.btn.btn-light(href='/appointments/day')
+              +icon('calendar-check')
+              span Consulter l'agenda
+            a.hero-text-link(href='/doctors') Gérer les médecins
+      .hero-art(aria-hidden='true')
+        .hero-orbit.orbit-one
+        .hero-orbit.orbit-two
+        .hero-cross +
+        .hero-card
+          .hero-card-icon
+            +icon('heart-pulse')
+          span.hero-card-label Un suivi en toute confiance
+          strong Des soins coordonnés
+          span.hero-card-status
+            i
+            | Votre espace est prêt
+
+    section.home-shortcuts(aria-label='Accès rapides')
+      if currentUser.role === 'patient'
+        a.shortcut-card(href='/appointments/new')
+          span.shortcut-icon
+            +icon('calendar-plus')
+          span
+            strong Réserver une consultation
+            small Trouvez un créneau qui vous convient
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/appointments')
+          span.shortcut-icon
+            +icon('calendar-days')
+          span
+            strong Mes rendez-vous
+            small Consultez et gérez vos réservations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/profile')
+          span.shortcut-icon
+            +icon('user-round')
+          span
+            strong Mon profil
+            small Gardez vos informations à jour
+          +icon('arrow-up-right')
+      else if currentUser.role === 'doctor'
+        a.shortcut-card(href='/appointments/day')
+          span.shortcut-icon
+            +icon('calendar-check')
+          span
+            strong Agenda du jour
+            small Retrouvez vos consultations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/appointments')
+          span.shortcut-icon
+            +icon('calendar-days')
+          span
+            strong Mes rendez-vous
+            small Consultez votre planning
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/availability')
+          span.shortcut-icon
+            +icon('clock')
+          span
+            strong Disponibilités
+            small Définissez vos créneaux
+          +icon('arrow-up-right')
+      else
+        a.shortcut-card(href='/appointments/day')
+          span.shortcut-icon
+            +icon('calendar-check')
+          span
+            strong Agenda du jour
+            small Vue globale des consultations
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/doctors')
+          span.shortcut-icon
+            +icon('stethoscope')
+          span
+            strong Équipe médicale
+            small Gérez les profils médecins
+          +icon('arrow-up-right')
+        a.shortcut-card(href='/patients')
+          span.shortcut-icon
+            +icon('users')
+          span
+            strong Dossiers patients
+            small Accédez aux dossiers
+          +icon('arrow-up-right')
+
+    section.home-featured(aria-labelledby='featured-title')
+      .section-heading
+        div
+          span.eyebrow À découvrir
+          h2#featured-title Prenez soin de vous, en toute simplicité
+        .carousel-controls
+          button.icon-btn(type='button', data-carousel-prev, aria-label='Conseil précédent')
+            +icon('chevron-left')
+          button.icon-btn(type='button', data-carousel-next, aria-label='Conseil suivant')
+            +icon('chevron-right')
+      .feature-carousel(data-carousel)
+        article.feature-slide.is-active
+          .feature-visual.feature-visual-teal(aria-hidden='true')
+            +icon('calendar-heart')
+            span 01
+          .feature-copy
+            span.feature-kicker Organisation
+            h3 Anticipez vos consultations
+            p Réservez votre créneau à l'avance et retrouvez les détails de vos rendez-vous au même endroit.
+            if currentUser.role === 'patient'
+              a.text-link(href='/appointments/new') Choisir un créneau
+            else
+              a.text-link(href='/appointments') Voir les rendez-vous
+        article.feature-slide(aria-hidden='true')
+          .feature-visual.feature-visual-blue(aria-hidden='true')
+            +icon('shield-check')
+            span 02
+          .feature-copy
+            span.feature-kicker Sérénité
+            h3 Vos informations, bien organisées
+            p Un espace dédié pour consulter les informations utiles et garder votre parcours de soins à portée de main.
+            if currentUser.role === 'patient'
+              a.text-link(href='/profile') Mettre à jour mon profil
+            else
+              a.text-link(href='/patients') Accéder aux patients
+        article.feature-slide(aria-hidden='true')
+          .feature-visual.feature-visual-sand(aria-hidden='true')
+            +icon('stethoscope')
+            span 03
+          .feature-copy
+            span.feature-kicker Coordination
+            h3 Une équipe à votre écoute
+            p Une meilleure visibilité sur les disponibilités facilite l'organisation des consultations.
+            if currentUser.role === 'patient'
+              a.text-link(href='/appointments/new') Trouver un médecin
+            else if currentUser.role === 'doctor'
+              a.text-link(href='/availability') Gérer mes créneaux
+            else
+              a.text-link(href='/doctors') Découvrir l'équipe
+      .carousel-dots(aria-label='Choisir un conseil')
+        button.is-active(type='button', data-carousel-dot='0', aria-label='Afficher le conseil 1', aria-current='true')
+        button(type='button', data-carousel-dot='1', aria-label='Afficher le conseil 2')
+        button(type='button', data-carousel-dot='2', aria-label='Afficher le conseil 3')
+
+    section.home-trust
+      .trust-item
+        +icon('lock-keyhole')
+        div
+          strong Espace sécurisé
+          span Vos accès sont personnels
+      .trust-item
+        +icon('heart-handshake')
+        div
+          strong Parcours simplifié
+          span Les informations essentielles réunies
+      .trust-item
+        +icon('clock-3')
+        div
+          strong Gain de temps
+          span Des démarches plus fluides
+
+===== FILE: src/routes/web/index.js =====
+const router = require('express').Router();
+const authRoutes = require('./auth');
+const specialtyRoutes = require('./specialties');
+const doctorRoutes = require('./doctors');
+const patientRoutes = require('./patients');
+const accountRoutes = require('./account');
+const availabilityRoutes = require('./availability');
+const appointmentRoutes = require('./appointments');
+const { requireAuth } = require('../../middleware/auth');
+
+router.use(authRoutes);
+router.use('/specialties', specialtyRoutes);
+router.use('/doctors', doctorRoutes);
+router.use('/patients', patientRoutes);
+router.use(accountRoutes);
+router.use('/availability', availabilityRoutes);
+router.use('/appointments', appointmentRoutes);
+
+router.get('/', requireAuth, (req, res) => {
+  res.render('pages/home', { title: 'Accueil' });
+});
+
+module.exports = router;
+
+===== FILE: src/routes/web/patients.js =====
+const router = require('express').Router();
+const controller = require('../../controllers/patientController');
+const { requireAuth, requireRole } = require('../../middleware/auth');
+const { createRules, updateRules } = require('../../validators/patient');
+
+router.use(requireAuth, requireRole('admin'));
+
+router.get('/', controller.index);
+router.get('/new', controller.newForm);
+router.post('/', createRules, controller.create);
+router.get('/:id', controller.show);
+router.get('/:id/edit', controller.editForm);
+router.post('/:id', updateRules, controller.update);
+router.post('/:id/delete', controller.remove);
+router.post('/:id/reactivate', controller.reactivate);
+
+module.exports = router;
+
+===== FILE: src/routes/web/specialties.js =====
+const router = require('express').Router();
+const controller = require('../../controllers/specialtyController');
+const { requireAuth, requireRole } = require('../../middleware/auth');
+const { specialtyRules } = require('../../validators/specialty');
+
+router.use(requireAuth, requireRole('admin'));
+
+router.get('/', controller.index);
+router.get('/new', controller.newForm);
+router.post('/', specialtyRules, controller.create);
+router.get('/:id/edit', controller.editForm);
+router.post('/:id', specialtyRules, controller.update);
+router.post('/:id/delete', controller.remove);
+
+module.exports = router;
+
+===== FILE: src/middleware/auth.js =====
+const User = require('../models/User');
+const HttpError = require('../utils/httpError');
+const { COOKIE_NAME } = require('../config/session');
+
+const isApi = (req) => req.originalUrl.startsWith('/api/');
+
+function redirectIfAuthenticated(req, res, next) {
+  if (req.session && req.session.user) return res.redirect('/');
+  return next();
+}
+
+// Requires a logged-in, still-active user. The role is re-read from the database
+// on every request, so deactivating a user or changing a role applies immediately.
+async function requireAuth(req, res, next) {
+  const sessionUser = req.session && req.session.user;
+  if (!sessionUser) {
+    return isApi(req) ? next(new HttpError(401, 'Authentification requise.')) : res.redirect('/login');
+  }
+  try {
+    const user = await User.findById(sessionUser.id).select('active role');
+    if (!user || !user.active) {
+      return req.session.destroy(() => {
+        res.clearCookie(COOKIE_NAME);
+        if (isApi(req)) return next(new HttpError(401, 'Authentification requise.'));
+        return res.redirect('/login');
+      });
+    }
+    sessionUser.role = user.role;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// Use after requireAuth: requireRole('admin') or requireRole('admin', 'doctor').
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const user = req.session && req.session.user;
+    if (!user || !roles.includes(user.role)) {
+      return next(new HttpError(403, "Vous n'avez pas accès à cette page."));
+    }
+    return next();
+  };
+}
+
+module.exports = { redirectIfAuthenticated, requireAuth, requireRole };
+
+===== FILE: src/middleware/errorHandler.js =====
+const config = require('../config/env');
+
+function notFound(req, res, next) {
+  const err = new Error('Page introuvable');
+  err.status = 404;
+  next(err);
+}
+
+function errorHandler(err, req, res, next) {
+  const status = err.status || 500;
+  const message = status === 500 && config.nodeEnv === 'production'
+    ? 'Une erreur interne est survenue.'
+    : err.message;
+
+  if (status === 500) console.error(err);
+
+  if (req.originalUrl.startsWith('/api/')) {
+    const body = { status, message };
+    if (err.type === 'entity.parse.failed') body.message = 'Corps de requête JSON invalide.';
+    const fields = err.fields || (err.field ? { [err.field]: err.message } : null);
+    if (fields) body.fields = fields;
+    return res.status(status).json({ error: body });
+  }
+  res.status(status).render('errors/error', { title: `Erreur ${status}`, status, message });
+}
+
+module.exports = { notFound, errorHandler };
+
+===== FILE: src/middleware/validate.js =====
+const HttpError = require('../utils/httpError');
+const { fieldErrors } = require('../validators/common');
+
+// API: turn express-validator results into a 422 response with per-field messages.
+function validate(req, res, next) {
+  const errors = fieldErrors(req);
+  if (Object.keys(errors).length) return next(HttpError.validation(errors));
+  return next();
+}
+
+module.exports = validate;
+
+===== FILE: src/middleware/flash.js =====
+// One-time messages that survive a redirect: req.flash('success', 'Message').
+function flash(req, res, next) {
+  req.flash = (type, message) => {
+    req.session.flash = [...(req.session.flash || []), { type, message }];
+  };
+  res.locals.flash = req.session.flash || [];
+  delete req.session.flash;
+  next();
+}
+
+module.exports = flash;
+
+===== FILE: src/controllers/patientController.js =====
+const patientService = require('../services/patientService');
+const { fieldErrors } = require('../validators/common');
+const { toInputDate } = require('../utils/dates');
+
+const FIELDS = ['firstName', 'lastName', 'email', 'birthDate', 'phone'];
+const pick = (body) => Object.fromEntries(FIELDS.map((f) => [f, (body[f] || '').toString().trim()]));
+const toErrors = (err) => (err.field ? { [err.field]: err.message } : { form: err.message });
+const isFormError = (err) => err.status === 409 || err.status === 422;
+const fullName = (patient) => `${patient.user.firstName} ${patient.user.lastName}`;
+
+function renderForm(res, status, { patient = null, values, errors = {} }) {
+  res.status(status).render('pages/patients/form', {
+    title: patient ? 'Modifier le patient' : 'Nouveau patient',
+    patient,
+    values,
+    errors,
+  });
+}
+
+async function index(req, res) {
+  res.render('pages/patients/index', { title: 'Patients', patients: await patientService.list() });
+}
+
+async function show(req, res) {
+  const patient = await patientService.get(req.params.id);
+  res.render('pages/patients/show', { title: fullName(patient), patient });
+}
+
+function newForm(req, res) {
+  renderForm(res, 200, { values: pick({}) });
+}
+
+async function create(req, res) {
+  const values = pick(req.body);
+  const errors = fieldErrors(req);
+  if (Object.keys(errors).length) return renderForm(res, 422, { values, errors });
+  try {
+    const patient = await patientService.create({ ...values, password: req.body.password });
+    req.flash('success', 'Patient créé.');
+    return res.redirect(`/patients/${patient.id}`);
+  } catch (err) {
+    if (isFormError(err)) return renderForm(res, err.status, { values, errors: toErrors(err) });
+    throw err;
+  }
+}
+
+async function editForm(req, res) {
+  const patient = await patientService.get(req.params.id);
+  const values = { ...pick(patient.user), birthDate: toInputDate(patient.birthDate), phone: patient.phone };
+  renderForm(res, 200, { patient, values });
+}
+
+async function update(req, res) {
+  const patient = await patientService.get(req.params.id);
+  const values = pick(req.body);
+  const errors = fieldErrors(req);
+  if (Object.keys(errors).length) return renderForm(res, 422, { patient, values, errors });
+  try {
+    await patientService.update(req.params.id, { ...values, password: req.body.password });
+    req.flash('success', 'Patient modifié.');
+    return res.redirect(`/patients/${req.params.id}`);
+  } catch (err) {
+    if (isFormError(err)) return renderForm(res, err.status, { patient, values, errors: toErrors(err) });
+    throw err;
+  }
+}
+
+async function remove(req, res) {
+  try {
+    const { patient, deactivated } = await patientService.remove(req.params.id);
+    req.flash('success', deactivated
+      ? `Patient « ${fullName(patient)} » désactivé : son historique de rendez-vous est conservé.`
+      : `Patient « ${fullName(patient)} » supprimé.`);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+  }
+  res.redirect('/patients');
+}
+
+async function reactivate(req, res) {
+  const patient = await patientService.reactivate(req.params.id);
+  req.flash('success', `Patient « ${fullName(patient)} » réactivé.`);
+  res.redirect(`/patients/${req.params.id}`);
+}
+
+module.exports = { index, show, newForm, create, editForm, update, remove, reactivate, pick, toErrors, isFormError };
+
+===== FILE: src/controllers/specialtyController.js =====
+const specialtyService = require('../services/specialtyService');
+const { fieldErrors } = require('../validators/common');
+
+function renderForm(res, status, { specialty = null, name = '', errors = {} }) {
+  res.status(status).render('pages/specialties/form', {
+    title: specialty ? 'Modifier la spécialité' : 'Nouvelle spécialité',
+    specialty,
+    values: { name },
+    errors,
+  });
+}
+
+async function index(req, res) {
+  res.render('pages/specialties/index', { title: 'Spécialités', specialties: await specialtyService.list() });
+}
+
+function newForm(req, res) {
+  renderForm(res, 200, {});
+}
+
+async function create(req, res) {
+  const name = req.body.name || '';
+  const errors = fieldErrors(req);
+  if (Object.keys(errors).length) return renderForm(res, 422, { name, errors });
+  try {
+    const specialty = await specialtyService.create({ name });
+    req.flash('success', `Spécialité « ${specialty.name} » créée.`);
+    return res.redirect('/specialties');
+  } catch (err) {
+    if (err.status === 409 || err.status === 422) return renderForm(res, err.status, { name, errors: { name: err.message } });
+    throw err;
+  }
+}
+
+async function editForm(req, res) {
+  const specialty = await specialtyService.get(req.params.id);
+  renderForm(res, 200, { specialty, name: specialty.name });
+}
+
+async function update(req, res) {
+  const specialty = await specialtyService.get(req.params.id);
+  const name = req.body.name || '';
+  const errors = fieldErrors(req);
+  if (Object.keys(errors).length) return renderForm(res, 422, { specialty, name, errors });
+  try {
+    const updated = await specialtyService.update(req.params.id, { name });
+    req.flash('success', `Spécialité « ${updated.name} » modifiée.`);
+    return res.redirect('/specialties');
+  } catch (err) {
+    if (err.status === 409 || err.status === 422) return renderForm(res, err.status, { specialty, name, errors: { name: err.message } });
+    throw err;
+  }
+}
+
+async function remove(req, res) {
+  try {
+    const specialty = await specialtyService.remove(req.params.id);
+    req.flash('success', `Spécialité « ${specialty.name} » supprimée.`);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+  }
+  res.redirect('/specialties');
+}
+
+module.exports = { index, newForm, create, editForm, update, remove };
+
+===== FILE: src/services/userService.js =====
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
+const HttpError = require('../utils/httpError');
+
+const SALT_ROUNDS = 10;
+const MIN_PASSWORD_LENGTH = 8;
+
+function checkPassword(password) {
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    throw new HttpError(422, `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`, 'password');
+  }
+}
+
+function translate(err) {
+  if (err.code === 11000) return new HttpError(409, 'Cette adresse e-mail est déjà utilisée.', 'email');
+  if (err.name === 'ValidationError') return new HttpError(422, "Les informations de l'utilisateur sont invalides.");
+  return err;
+}
+
+async function createUser({ email, password, role, firstName, lastName }) {
+  checkPassword(password);
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  try {
+    return await User.create({ email, passwordHash, role, firstName, lastName });
+  } catch (err) {
+    throw translate(err);
+  }
+}
+
+// `password` is optional: leave it empty to keep the current one.
+async function updateUser(id, { email, password, firstName, lastName }) {
+  const user = await User.findById(id).select('+passwordHash');
+  if (!user) throw new HttpError(404, 'Utilisateur introuvable.');
+  if (password) {
+    checkPassword(password);
+    user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  }
+  Object.assign(user, { email, firstName, lastName });
+  try {
+    return await user.save();
+  } catch (err) {
+    throw translate(err);
+  }
+}
+
+async function setActive(id, active) {
+  const result = await User.updateOne({ _id: id }, { active });
+  if (!result.matchedCount) throw new HttpError(404, 'Utilisateur introuvable.');
+}
+
+module.exports = { createUser, updateUser, setActive, MIN_PASSWORD_LENGTH };
+
+===== FILE: src/services/patientService.js =====
+const mongoose = require('mongoose');
+const Patient = require('../models/Patient');
+const User = require('../models/User');
+const userService = require('./userService');
+const { removalPlan } = require('./retention');
+const HttpError = require('../utils/httpError');
+const { parseBirthDate } = require('../utils/dates');
+
+const NOT_FOUND = 'Patient introuvable.';
+const collator = new Intl.Collator('fr', { sensitivity: 'base' });
+
+const populate = (query) => query.populate('user', 'firstName lastName email active');
+
+function checkBirthDate(value) {
+  const date = parseBirthDate(value);
+  if (!date) throw new HttpError(422, 'Saisissez une date de naissance valide (pas dans le futur).', 'birthDate');
+  return date;
+}
+
+async function list() {
+  const patients = await populate(Patient.find()).lean();
+  const key = (p) => `${p.user.lastName} ${p.user.firstName}`;
+  return patients.sort((a, b) => collator.compare(key(a), key(b)));
+}
+
+async function get(id) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, NOT_FOUND);
+  const patient = await populate(Patient.findById(id)).lean();
+  if (!patient) throw new HttpError(404, NOT_FOUND);
+  return patient;
+}
+
+async function getByUser(userId) {
+  const patient = await populate(Patient.findOne({ user: userId })).lean();
+  if (!patient) throw new HttpError(404, NOT_FOUND);
+  return patient;
+}
+
+async function create({ firstName, lastName, email, password, birthDate, phone }) {
+  const date = checkBirthDate(birthDate);
+  const user = await userService.createUser({ email, password, firstName, lastName, role: 'patient' });
+  try {
+    return await Patient.create({ user: user.id, birthDate: date, phone });
+  } catch (err) {
+    await User.deleteOne({ _id: user.id }); // no orphan account if the profile cannot be saved
+    if (err.name === 'ValidationError') throw new HttpError(422, 'Les informations du patient sont invalides.');
+    throw err;
+  }
+}
+
+async function update(id, { firstName, lastName, email, password, birthDate, phone }) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, NOT_FOUND);
+  const patient = await Patient.findById(id);
+  if (!patient) throw new HttpError(404, NOT_FOUND);
+  const date = checkBirthDate(birthDate);
+  const user = await userService.updateUser(patient.user, { email, password, firstName, lastName });
+  Object.assign(patient, { birthDate: date, phone });
+  await patient.save();
+  return { patient, user };
+}
+
+// Deletes a patient with no appointment history; deactivates one whose history must be kept;
+// refuses while upcoming appointments exist.
+async function remove(id) {
+  const patient = await get(id);
+  const plan = await removalPlan({ patient: patient._id });
+  if (plan.action === 'refuse') {
+    throw new HttpError(409, `Ce patient a ${plan.upcoming} rendez-vous à venir. Annulez-les avant de le supprimer.`);
+  }
+  if (plan.action === 'deactivate') {
+    await User.updateOne({ _id: patient.user._id }, { active: false });
+    return { patient, deactivated: true };
+  }
+  await Patient.deleteOne({ _id: id });
+  await User.deleteOne({ _id: patient.user._id });
+  return { patient, deactivated: false };
+}
+
+async function reactivate(id) {
+  const patient = await get(id);
+  await userService.setActive(patient.user._id, true);
+  return patient;
+}
+
+module.exports = { list, get, getByUser, create, update, remove, reactivate };
+
+===== FILE: src/models/User.js =====
+const mongoose = require('mongoose');
+
+const ROLES = ['admin', 'doctor', 'patient'];
+
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    },
+    passwordHash: { type: String, required: true, select: false },
+    role: { type: String, enum: ROLES, required: true },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
+    active: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+userSchema.virtual('fullName').get(function fullName() {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+// Never expose the password hash, even if it was selected.
+userSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    delete ret.passwordHash;
+    delete ret.id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+module.exports = mongoose.model('User', userSchema);
+module.exports.ROLES = ROLES;
+
+===== FILE: src/utils/session.js =====
+// Starts a logged-in session. A new session id on login prevents session fixation.
+function establishSession(req, user) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((regenError) => {
+      if (regenError) return reject(regenError);
+      req.session.user = { id: user.id, fullName: user.fullName, role: user.role };
+      return req.session.save((saveError) => (saveError ? reject(saveError) : resolve()));
+    });
+  });
+}
+
+module.exports = { establishSession };
+
+===== FILE: src/utils/httpError.js =====
+class HttpError extends Error {
+  // `field` (optional) names the form field the message belongs to.
+  constructor(status, message, field) {
+    super(message);
+    this.status = status;
+    this.field = field;
+  }
+}
+
+// 422 with several field messages: { fieldName: 'message' }.
+HttpError.validation = (fields) => {
+  const error = new HttpError(422, 'Les données envoyées sont invalides.');
+  error.fields = fields;
+  return error;
+};
+
+module.exports = HttpError;
+
+===== FILE: src/validators/patient.js =====
+const { body } = require('express-validator');
+const { MIN_PASSWORD_LENGTH } = require('../services/userService');
+const { parseBirthDate } = require('../utils/dates');
+
+const common = [
+  body('firstName').trim().isLength({ min: 2, max: 60 }).withMessage('Le prénom doit contenir entre 2 et 60 caractères.'),
+  body('lastName').trim().isLength({ min: 2, max: 60 }).withMessage('Le nom doit contenir entre 2 et 60 caractères.'),
+  body('email').trim().isEmail().withMessage('Saisissez une adresse e-mail valide.'),
+  body('birthDate').custom((value) => Boolean(parseBirthDate(value))).withMessage('Saisissez une date de naissance valide (pas dans le futur).'),
+  body('phone').trim().optional({ values: 'falsy' }).matches(/^[+\d\s().-]{6,20}$/).withMessage('Saisissez un numéro de téléphone valide.'),
+];
+
+const passwordMessage = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`;
+
+const createRules = [...common, body('password').isLength({ min: MIN_PASSWORD_LENGTH }).withMessage(passwordMessage)];
+const updateRules = [
+  ...common,
+  body('password').optional({ values: 'falsy' }).isLength({ min: MIN_PASSWORD_LENGTH }).withMessage(passwordMessage),
+];
+
+module.exports = { createRules, updateRules };
+
+===== FILE: src/validators/specialty.js =====
+const { body } = require('express-validator');
+
+const specialtyRules = [
+  body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Le nom doit contenir entre 2 et 80 caractères.'),
+];
+
+module.exports = { specialtyRules };
+
+===== FILE: src/validators/common.js =====
+const { validationResult } = require('express-validator');
+
+// { fieldName: 'first error message' } for re-displaying a form.
+function fieldErrors(req) {
+  const errors = {};
+  for (const error of validationResult(req).array({ onlyFirstError: true })) errors[error.path] = error.msg;
+  return errors;
+}
+
+module.exports = { fieldErrors };
+
+===== FILE: src/views/pages/specialties/index.pug =====
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 Spécialités
+    a.btn.btn-primary(href='/specialties/new')
+      +icon('plus')
+      span Nouvelle spécialité
+  if specialties.length
+    .table-wrap
+      table.table
+        thead
+          tr
+            th(scope='col') Nom
+            th.col-actions(scope='col') Actions
+        tbody
+          each specialty in specialties
+            tr
+              td= specialty.name
+              td.col-actions
+                .table-actions
+                  a.btn.btn-secondary.btn-sm(href=`/specialties/${specialty._id}/edit`)
+                    +icon('pencil')
+                    span Modifier
+                  form(method='post', action=`/specialties/${specialty._id}/delete`, data-confirm=`Supprimer la spécialité « ${specialty.name} » ? Cette action est définitive.`, data-confirm-title='Supprimer la spécialité', data-confirm-label='Supprimer')
+                    button.btn.btn-danger.btn-sm(type='submit')
+                      +icon('trash-2')
+                      span Supprimer
+  else
+    .empty-state
+      h2 Aucune spécialité
+      p Ajoutez une première spécialité pour pouvoir y associer des médecins.
+      a.btn.btn-primary(href='/specialties/new')
+        +icon('plus')
+        span Nouvelle spécialité
+
+===== FILE: src/views/pages/specialties/form.pug =====
+extends ../../layouts/base
+
+block content
+  .page-header
+    h1= specialty ? 'Modifier la spécialité' : 'Nouvelle spécialité'
+  form.form(method='post', action=specialty ? `/specialties/${specialty._id}` : '/specialties', data-loading-text='Enregistrement…')
+    .field
+      label.label(for='name') Nom de la spécialité
+      input#name.input(type='text', name='name', value=values.name, required, maxlength='80', autofocus, aria-invalid=errors.name ? 'true' : false, aria-describedby=errors.name ? 'name-error' : false)
+      if errors.name
+        p#name-error.field-error= errors.name
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer
+      a.btn.btn-secondary(href='/specialties') Annuler
+
+===== FILE: src/views/pages/patients/show.pug =====
+extends ../../layouts/base
+
+block content
+  include ../../partials/icon
+  .page-header
+    h1 #{patient.user.firstName} #{patient.user.lastName}
+    a.btn.btn-secondary(href=`/patients/${patient._id}/edit`)
+      +icon('pencil')
+      span Modifier
+  if patient.user.active === false
+    .alert.alert-info(role='status')
+      span.alert-text Ce compte est désactivé : connexion impossible, historique de rendez-vous conservé.
+      form(method='post', action=`/patients/${patient._id}/reactivate`)
+        button.btn.btn-secondary.btn-sm(type='submit') Réactiver
+  dl.details
+    dt Adresse e-mail
+    dd= patient.user.email
+    dt Date de naissance
+    dd= formatDate(patient.birthDate)
+    dt Téléphone
+    dd= patient.phone || '-'
+  p
+    a(href='/patients') Retour à la liste des patients
+
+===== FILE: src/views/pages/patients/form.pug =====
+extends ../../layouts/base
+include ../../partials/patient-fields
+
+block content
+  .page-header
+    h1= patient ? 'Modifier le patient' : 'Nouveau patient'
+  if errors.form
+    .alert.alert-danger(role='alert')
+      span.alert-text= errors.form
+  form.form(method='post', action=patient ? `/patients/${patient._id}` : '/patients', data-loading-text='Enregistrement…')
+    +patientFields(values, errors, patient ? 'edit' : 'create')
+    .form-actions
+      button.btn.btn-primary(type='submit') Enregistrer
+      a.btn.btn-secondary(href=patient ? `/patients/${patient._id}` : '/patients') Annuler
+
+===== FILE: src/views/errors/error.pug =====
+extends ../layouts/base
+
+block content
+  .page-header
+    h1 Erreur #{status}
+  p= message
+  a.btn.btn-secondary(href='/') Retour à l'accueil
+
+===== FILE: tests/layout.test.js =====
+const db = require('./helpers/setup');
+const test = require('node:test');
+const assert = require('node:assert');
+const app = require('../src/app');
+const User = require('../src/models/User');
+const { getNavigation } = require('../src/utils/navigation');
+const { createClient } = require('./helpers/http');
+const { createUser, loginAs } = require('./helpers/fixtures');
+
+let client;
+
+test.before(async () => { await db.connect(); await User.init(); });
+test.beforeEach(async () => { await db.clear(); client = createClient(app); });
+test.afterEach(() => client.close());
+test.after(db.close);
+
+async function homeAs(role) {
+  const user = await createUser(role);
+  await loginAs(client, user.email);
+  return (await client.request('/')).html;
+}
+
+test('getNavigation marks only the longest matching item as active', () => {
+  const active = getNavigation('patient', '/appointments/new').filter((i) => i.active);
+  assert.deepStrictEqual(active.map((i) => i.href), ['/appointments/new']);
+  const home = getNavigation('admin', '/').filter((i) => i.active);
+  assert.deepStrictEqual(home.map((i) => i.href), ['/']);
+  assert.deepStrictEqual(getNavigation('unknown', '/'), []);
+});
+
+test('admin sees hamburger, full menu, active link, role and footer', async () => {
+  const html = await homeAs('admin');
+  assert.match(html, /lang="fr"/);
+  assert.match(html, /id="sidebar-toggle"/);
+  assert.match(html, /Médecins/);
+  assert.match(html, /Spécialités/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(html, /Administrateur/);
+  assert.match(html, /Version 0\.1\.0/);
+});
+
+test('doctor and patient menus are role specific', async () => {
+  const doctor = await homeAs('doctor');
+  assert.match(doctor, /Mes disponibilités/);
+  assert.doesNotMatch(doctor, /Spécialités/);
+  await db.clear();
+  client.jar.clear();
+  const patient = await homeAs('patient');
+  assert.match(patient, /Prendre rendez-vous/);
+  assert.doesNotMatch(patient, /Mes disponibilités/);
+});
+
+===== FILE: tests/rbac.test.js =====
+const db = require('./helpers/setup');
+const path = require('node:path');
+const test = require('node:test');
+const assert = require('node:assert');
+const express = require('express');
+const realApp = require('../src/app');
+const User = require('../src/models/User');
+const { createSessionMiddleware } = require('../src/config/session');
+const viewLocals = require('../src/middleware/viewLocals');
+const { requireAuth, requireRole } = require('../src/middleware/auth');
+const { notFound, errorHandler } = require('../src/middleware/errorHandler');
+const { createClient } = require('./helpers/http');
+const { createUser, loginAs } = require('./helpers/fixtures');
+
+// A small app with protected routes. It shares the session store and secret with the
+// real app, so a cookie obtained by logging in to the real app is valid here too.
+function protectedApp() {
+  const app = express();
+  app.set('view engine', 'pug');
+  app.set('views', path.join(__dirname, '../src/views'));
+  app.use(createSessionMiddleware());
+  app.use(viewLocals);
+  app.get('/admin-only', requireAuth, requireRole('admin'), (req, res) => res.send('secret admin page'));
+  app.get('/api/v1/admin-only', requireAuth, requireRole('admin'), (req, res) => res.json({ ok: true }));
+  app.use(notFound);
+  app.use(errorHandler);
+  return app;
+}
+
+let real;
+let guarded;
+
+test.before(async () => { await db.connect(); await User.init(); });
+test.beforeEach(async () => { await db.clear(); real = createClient(realApp); guarded = createClient(protectedApp()); });
+test.afterEach(() => { real.close(); guarded.close(); });
+test.after(db.close);
+
+async function loginAsRole(role) {
+  const user = await createUser(role);
+  await loginAs(real, user.email);
+  for (const [name, value] of real.jar) guarded.jar.set(name, value);
+}
+
+test('anonymous users are redirected (web) or get 401 JSON (API)', async () => {
+  const web = await guarded.request('/admin-only');
+  assert.strictEqual(web.status, 302);
+  assert.strictEqual(web.location, '/login');
+  const api = await guarded.request('/api/v1/admin-only');
+  assert.strictEqual(api.status, 401);
+  assert.strictEqual(JSON.parse(api.html).error.status, 401);
+});
+
+test('a user with the wrong role gets 403 on web and API', async () => {
+  await loginAsRole('patient');
+  const web = await guarded.request('/admin-only');
+  assert.strictEqual(web.status, 403);
+  assert.match(web.html, /Erreur 403/);
+  assert.doesNotMatch(web.html, /secret admin page/);
+  const api = await guarded.request('/api/v1/admin-only');
+  assert.strictEqual(api.status, 403);
+});
+
+test('a user with the right role is allowed', async () => {
+  await loginAsRole('admin');
+  const web = await guarded.request('/admin-only');
+  assert.strictEqual(web.status, 200);
+  assert.strictEqual(web.html, 'secret admin page');
+});
+
+test('deactivating a user ends their access immediately', async () => {
+  await loginAsRole('admin');
+  await User.updateOne({ email: 'admin@clinique.test' }, { active: false });
+  const web = await guarded.request('/admin-only');
+  assert.strictEqual(web.status, 302);
+  assert.strictEqual(web.location, '/login');
+  const home = await real.request('/');
+  assert.strictEqual(home.status, 302);
+});
+
+test('a role change in the database applies without logging in again', async () => {
+  await loginAsRole('admin');
+  await User.updateOne({ email: 'admin@clinique.test' }, { role: 'patient' });
+  const web = await guarded.request('/admin-only');
+  assert.strictEqual(web.status, 403);
+});
+
+===== FILE: tests/user.test.js =====
+const db = require('./helpers/setup');
+const test = require('node:test');
+const assert = require('node:assert');
+const User = require('../src/models/User');
+const userService = require('../src/services/userService');
+
+const valid = { email: 'Admin@Clinique.test ', password: 'motdepasse1', role: 'admin', firstName: 'Awa', lastName: 'Ndayi' };
+
+test.before(async () => { await db.connect(); await User.init(); });
+test.beforeEach(db.clear);
+test.after(db.close);
+
+test('createUser hashes the password and normalises the email', async () => {
+  const user = await userService.createUser(valid);
+  const stored = await User.findById(user.id).select('+passwordHash');
+  assert.strictEqual(stored.email, 'admin@clinique.test');
+  assert.notStrictEqual(stored.passwordHash, valid.password);
+  assert.match(stored.passwordHash, /^\$2[aby]\$/);
+});
+
+test('passwordHash is never exposed by default or in JSON', async () => {
+  await userService.createUser(valid);
+  const found = await User.findOne({ email: 'admin@clinique.test' });
+  assert.strictEqual(found.passwordHash, undefined);
+  const withHash = await User.findOne({}).select('+passwordHash');
+  assert.strictEqual(JSON.parse(JSON.stringify(withHash)).passwordHash, undefined);
+  assert.strictEqual(found.fullName, 'Awa Ndayi');
+});
+
+test('rejects short passwords, bad roles and duplicate emails', async () => {
+  await assert.rejects(userService.createUser({ ...valid, password: 'court' }), { status: 422 });
+  await assert.rejects(userService.createUser({ ...valid, role: 'root' }), { status: 422 });
+  await userService.createUser(valid);
+  await assert.rejects(userService.createUser({ ...valid, email: 'ADMIN@clinique.test' }), { status: 409 });
+});
+
+===== FILE: src/public/css/components.css =====
+/* ============================================================
+   MediCare — Reusable UI Components
+   ============================================================ */
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  height: 38px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid transparent;
+  transition: all var(--dur) var(--ease);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--teal-600); color: #fff;
+}
+.btn-primary:hover { background: var(--teal-500); color: #fff; }
+.btn-secondary {
+  background: var(--surface); color: var(--text); border-color: var(--border-strong);
+}
+.btn-secondary:hover { background: var(--bg); border-color: var(--text-muted); color: var(--navy-800); }
+.btn-danger {
+  background: var(--danger); color: #fff;
+}
+.btn-danger:hover { background: #c03a3a; color: #fff; }
+.btn-sm { height: 32px; padding: 0 var(--sp-3); font-size: var(--fs-xs); }
+
+/* --- Page Header --- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-6);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.page-header h1 { margin: 0; font-size: var(--fs-display); color: var(--navy-900); }
+
+/* --- Tables --- */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.table th, .table td {
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table th {
+  background: var(--surface-alt);
+  font-size: var(--fs-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background: var(--surface-alt); }
+.table td a { font-weight: var(--font-weight-medium); color: var(--navy-800); }
+.table td a:hover { color: var(--teal-600); }
+.col-actions { width: 1%; white-space: nowrap; text-align: right; }
+.table-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+/* --- Badges --- */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: 11px; font-weight: var(--font-weight-semibold);
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.badge-muted { background: var(--border); color: var(--text-muted); }
+
+/* --- Forms --- */
+.form { max-width: 640px; }
+.field { margin-bottom: var(--sp-5); }
+.label { display: block; margin-bottom: var(--sp-2); font-size: var(--fs-sm); font-weight: var(--font-weight-medium); color: var(--navy-800); }
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-body);
+  transition: border-color var(--dur);
+}
+.input:focus { border-color: var(--teal-600); outline: none; box-shadow: var(--shadow-focus); }
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { margin-top: var(--sp-1); font-size: var(--fs-xs); color: var(--danger); }
+.form-actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-6); }
+
+/* --- Alerts --- */
+.alert {
+  display: flex; align-items: flex-start; gap: var(--sp-3);
+  padding: var(--sp-4); border-radius: var(--r-md); margin-bottom: var(--sp-6);
+  font-size: var(--fs-sm); border: 1px solid transparent;
+}
+.alert-success { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+.alert-danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+.alert-info { background: var(--info-bg); color: var(--info); border-color: var(--info); }
+.alert-text { flex: 1; }
+.alert-close { background: none; border: none; color: inherit; padding: 0; cursor: pointer; opacity: 0.7; }
+.alert-close:hover { opacity: 1; }
+
+/* --- Empty State --- */
+.empty-state {
+  text-align: center; padding: var(--sp-12) var(--sp-6);
+  background: var(--surface); border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+.empty-state h2 { font-size: var(--fs-h2); color: var(--navy-800); margin-bottom: var(--sp-2); }
+.empty-state p { color: var(--text-muted); margin-bottom: var(--sp-6); }
+
+/* --- Details List --- */
+.details { display: grid; grid-template-columns: 200px 1fr; gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-6); }
+.details dt { font-weight: var(--font-weight-medium); color: var(--text-muted); }
+.details dd { margin: 0; color: var(--navy-900); font-weight: var(--font-weight-medium); }
+
+/* --- Dialog --- */
+.dialog {
+  border: none; border-radius: var(--r-lg); padding: 0;
+  box-shadow: var(--shadow-lg); max-width: 400px; width: 90%;
+}
+.dialog::backdrop { background: rgba(12, 45, 54, 0.6); }
+.dialog form { padding: var(--sp-6); }
+.dialog-title { margin-bottom: var(--sp-2); font-size: var(--fs-h3); }
+.dialog-message { margin-bottom: var(--sp-6); color: var(--text-muted); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); }
+
+/* --- Auth Pages --- */
+.auth { max-width: 400px; margin: var(--sp-12) auto; background: var(--surface); padding: var(--sp-8); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
+.auth h1 { text-align: center; margin-bottom: var(--sp-2); }
+.auth .text-muted { text-align: center; margin-bottom: var(--sp-6); }
+.auth .btn { width: 100%; margin-top: var(--sp-2); }
+.auth-alt { text-align: center; margin-top: var(--sp-6); font-size: var(--fs-sm); }
+.auth-wide { max-width: 600px; }
+
+/* --- Home Page Specifics --- */
+.home-page { display: flex; flex-direction: column; gap: var(--sp-8); }
+.home-hero {
+  display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--sp-8);
+  background: var(--navy-800); color: #fff; border-radius: var(--r-xl);
+  padding: var(--sp-10); overflow: hidden; position: relative;
+}
+.home-hero-copy { position: relative; z-index: 2; }
+.home-hero h1 { color: #fff; font-size: 2.5rem; margin-bottom: var(--sp-4); }
+.home-hero p { color: #D1E3E8; font-size: 1.125rem; max-width: 45ch; margin-bottom: var(--sp-6); }
+.hero-actions { display: flex; align-items: center; gap: var(--sp-4); }
+.hero-text-link { color: #fff; text-decoration: underline; font-weight: var(--font-weight-medium); }
+.hero-text-link:hover { color: var(--teal-100); }
+
+.hero-art { position: relative; display: flex; align-items: center; justify-content: center; }
+.hero-card {
+  background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2); padding: var(--sp-6);
+  border-radius: var(--r-lg); text-align: center; width: 100%; max-width: 280px;
+  position: relative; z-index: 2;
+}
+.hero-card-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--teal-600); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--sp-4); }
+.hero-card-label { display: block; font-size: var(--fs-xs); color: var(--teal-100); margin-bottom: var(--sp-1); }
+.hero-card strong { display: block; font-size: 1.25rem; margin-bottom: var(--sp-4); }
+.hero-card-status { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); font-size: var(--fs-sm); color: #D1E3E8; }
+.hero-card-status i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+.home-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+.shortcut-card {
+  display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); transition: transform var(--dur), box-shadow var(--dur);
+}
+.shortcut-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--teal-100); }
+.shortcut-icon { width: 48px; height: 48px; border-radius: var(--r-md); background: var(--teal-50); color: var(--teal-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.shortcut-icon .icon { width: 24px; height: 24px; }
+.shortcut-card strong { display: block; color: var(--navy-900); font-size: var(--fs-body); margin-bottom: 2px; }
+.shortcut-card small { color: var(--text-muted); font-size: var(--fs-xs); }
+
+.home-trust { display: flex; justify-content: space-around; padding: var(--sp-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); }
+.trust-item { display: flex; align-items: center; gap: var(--sp-3); }
+.trust-item .icon { width: 28px; height: 28px; color: var(--teal-600); }
+.trust-item strong { display: block; font-size: var(--fs-sm); color: var(--navy-900); }
+.trust-item span { font-size: var(--fs-xs); color: var(--text-muted); }
+
+@media (max-width: 1024px) {
+  .home-hero { grid-template-columns: 1fr; text-align: center; }
+  .hero-actions { justify-content: center; }
+  .hero-art { display: none; }
+  .home-shortcuts { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .home-shortcuts { grid-template-columns: 1fr; }
+  .home-trust { flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+}
+
+===== FILE: PROJECT_STATUS.md =====
+# PROJECT_STATUS
+
+**Phase:** 7 — REST API (done: 7a-7e); Phase 8 (finalization) ends the project; Phases 1-5 delivered, 4c/5 visually unconfirmed
+
+## Completed
+- Express skeleton, env config, health endpoint
+- Pug + static assets (base layout, home page)
+- Centralized error handling (HTML for web, JSON for /api)
+- MongoDB connection with clear French failure message (verified locally by user)
+- Design tokens (`css/tokens.css`), local IBM Plex Sans, Lucide sprite (`npm run build:assets`)
+- Auth: `User` model (names live on User), bcryptjs hashing, login/logout, MongoDB-backed sessions (8h, httpOnly, SameSite=Lax), `requireAuth`/`requireRole` (role + active re-checked from DB each request), `npm run create-admin`
+- Flash notifications, native `<dialog>` confirmation (`data-confirm` on forms), table/empty-state/form components (`css/components.css`, `js/ui.js`)
+- Specialties (admin only): list, create, edit, delete; unique ignoring case/accents (collation fr strength 1)
+- Doctors (admin only): list, view, create, edit, delete; creating a doctor creates a `doctor` login account (rolled back if the profile fails); empty password on edit keeps the old one; licence number unique
+- A specialty used by a doctor cannot be deleted
+- Patients: admin CRUD; public self-registration at `/register` (always role `patient`, logs the user in); patients edit their own info at `/profile` (header name kept in sync); birth date validated (no future, >= 1900) and shown dd/mm/yyyy
+- Availability (Phase 5): `AvailabilitySlot` (doctor, start, end, status free/booked; unique {doctor,start}). Doctors manage own slots, admins any doctor's via `?doctor=<id>` (also linked from the doctor page). One form adds a range split into 15/20/30/45/60-min slots or one single slot (max 48); overlaps refused (adjacent OK); edit/delete only while free; times typed in clinic time (`CLINIC_TIMEZONE`) and stored in UTC; list shows upcoming slots grouped by day
+- Appointments step 1: `Appointment` (slot, doctor, patient, start/end copied from slot, status confirmed|cancelled, reason<=300; partial unique index on slot where confirmed). Patient flow: `/appointments/new` (pick specialty -> doctors with free-slot counts) -> `/appointments/new/:doctorId` (free upcoming slots by day) -> `/appointments/book/:slotId` (confirm + optional reason) -> POST `/appointments`. Booking = atomic `findOneAndUpdate({status:'free', start>now}) -> booked`, then create appointment, slot released if creation fails. A patient cannot hold two overlapping appointments. `/appointments` lists upcoming + history, scoped by role (patient own, doctor own, admin all)
+- Appointments step 2: POST `/appointments/:id/cancel` (patient own, doctor own, admin any; others get 404). Appointment is cancelled atomically first (`status:'confirmed', start>now`), then its slot is released (`status:'booked'` guard), so a double cancel cannot free a re-booked slot. Past or already-cancelled appointments are refused with a message. `cancelledAt`/`cancelledBy` kept; history shows who cancelled
+- Appointments step 3: `/appointments/:id/edit` + POST `/appointments/:id` (patient own, admin any; doctors 403, others 404). Move to another free slot of the SAME doctor and/or change the reason. Safe order: claim new slot -> switch appointment (guarded by `status:'confirmed'` and its current slot) -> release old slot; any failure releases the claimed slot. A slot that vanished or was taken gives a normal message, not a 404 page. Tests assert the invariant (booked slots == confirmed appointments' slots, times match) under concurrent move/move and move/cancel
+- Appointments step 4a: `/appointments/day?date=YYYY-MM-DD` (doctor own, admin all; patients 403): confirmed appointments of one clinic-local day in time order, previous/today/next links and a date picker, invalid date -> redirect with message; days cut at clinic midnight (DST-safe). Menu entry "Agenda du jour" (doctor, admin)
+- Appointments step 4b (retention): deleting a doctor/patient is refused while they have upcoming confirmed appointments (cancel first); deactivated (user.active=false, record + history kept, doctor's free slots removed) when only past/cancelled appointments exist; hard-deleted only when no appointment ever referenced them. Deactivated doctors are hidden from search, cannot be booked or given slots; admin lists show a "Désactivé" badge and a Réactiver button. Lists skip appointments whose doctor/patient record is gone (legacy orphans)
+- REST API 7a (`/api/v1`, docs in `docs/API.md`): JSON-only writes (415 otherwise, empty body ok), errors `{error:{status,message,fields?}}`, validation via `middleware/validate.js` (422 + per-field messages), explicit serializers (`utils/serializers.js`), shared `utils/session.js`. Endpoints: GET /health, POST /auth/login|logout|register, GET /auth/me; /specialties (CRUD), /doctors (CRUD, reactivate, `/:id/slots`; public view for non-admins, deactivated doctors hidden); /patients (admin CRUD + reactivate) and `/patients/me` (patient reads/edits own profile); /availability (doctor own, admin via `?doctor=`; list/create range/get/move/delete); /appointments (list, `/day`, get, book, modify, cancel; own appointments only, conflicts carry `fields.slot`). Same cookie session as the web app
+- App shell: header + hamburger, collapsible role-based sidebar, footer, responsive (drawer < 62rem)
+
+## Decisions
+- Reference-based schemas (first/last name stored on User, Doctor/Patient reference User); slot-based availability; atomic `findOneAndUpdate` booking
+- `bcryptjs` instead of `bcrypt` (no native build on Windows)
+- No transactions (standalone MongoDB): atomic single-document ops + partial unique index
+- Tests run on a throw-away local DB per test process, no mongodb-memory-server (offline)
+
+## Important files
+- `src/app.js`, `src/server.js`, `src/config/env.js`, `src/config/database.js`, `src/middleware/errorHandler.js`, `src/middleware/viewLocals.js`, `src/utils/navigation.js`, `src/models/User.js`, `src/services/{userService,authService}.js`, `src/middleware/auth.js`, `src/config/session.js`, `src/{models/Specialty,services/specialtyService,controllers/specialtyController,routes/web/specialties}.js`, `src/views/pages/specialties/`, `src/{models/Doctor,services/doctorService,controllers/doctorController,routes/web/doctors,validators/doctor}.js`, `src/views/pages/doctors/`, `src/views/partials/{field,patient-fields}.pug` (reusable form mixins), `src/{models/Patient,services/patientService,controllers/{patientController,accountController},routes/web/{patients,account},validators/patient,utils/dates}.js`, `src/views/pages/{patients,account}/`, `src/{models/AvailabilitySlot,services/availabilityService,controllers/availabilityController,routes/web/availability,validators/availability,utils/time}.js`, `src/views/pages/availability/`, `src/{models/Appointment,services/appointmentService,controllers/appointmentController,routes/web/appointments,validators/appointment,utils/slotGroups}.js`, `src/views/pages/appointments/`, `tests/helpers/clinic.js` (shared scenario builders), `src/views/{layouts,partials}`, `src/public/css/{tokens,main,layout}.css`, `src/public/js/shell.js`
+
+## Tests
+- `npm test` (node:test): 178 pass against a real MongoDB 7 (per-process DB `medicare_test_<pid>`, dropped after): health, 404s, shell/nav, user model, login/logout, flash, RBAC, specialties, doctors, patients/registration/profile, time utils, availability, booking (incl. 8-way concurrent booking), cancellation, modification (incl. races), daily agenda, retention (delete/deactivate/refuse)
+- Confirmation dialog and notifications are JS-only and not browser-tested by me; no CSRF token (SameSite=Lax only), to revisit in Phase 8
+
+## Next
+- Phase 8 (the last phase): seed script with fictional demo data + demo accounts, Arch Linux and Windows install guides (beginner-friendly), final README, remaining hardening (CSRF token on web forms, security headers, `.env` checks), full test pass, Windows compatibility verification. Optional features (email/SMS reminders, calendar view) only after that
+
+## Known problems
+- Mongoose 9: use `returnDocument: 'after'` (not `new: true`) so findOneAndUpdate returns the updated document
+- A booking that lands in the same instant a doctor is deleted/deactivated could slip through (checked just before, no transactions); tiny window
+- If the process dies between claiming a slot and creating its appointment, the slot stays `booked` without appointment (no transactions); a reconcile script could free such slots
+- Overlap check is not atomic across concurrent requests with different start times (no transactions on standalone MongoDB); unique {doctor,start} covers identical starts; only doctors/admins create slots so risk is low
+- Sidebar links point to pages not built yet (404 until their phase)
+
+===== npm test (summary) =====
+# tests 178
+# pass 178
+# fail 0
+===== git status =====
+ M package-lock.json
+ M src/public/css/components.css
+ M src/public/css/main.css
+ M src/public/css/tokens.css
+?? file.txt
+?? medicare_context.txt
+?? medicare_export.txt
+?? ui_debug.txt
