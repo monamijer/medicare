@@ -2,13 +2,14 @@ const mongoose = require('mongoose');
 const Patient = require('../models/Patient');
 const User = require('../models/User');
 const userService = require('./userService');
+const { removalPlan } = require('./retention');
 const HttpError = require('../utils/httpError');
 const { parseBirthDate } = require('../utils/dates');
 
 const NOT_FOUND = 'Patient introuvable.';
 const collator = new Intl.Collator('fr', { sensitivity: 'base' });
 
-const populate = (query) => query.populate('user', 'firstName lastName email');
+const populate = (query) => query.populate('user', 'firstName lastName email active');
 
 function checkBirthDate(value) {
   const date = parseBirthDate(value);
@@ -57,11 +58,27 @@ async function update(id, { firstName, lastName, email, password, birthDate, pho
   return { patient, user };
 }
 
+// Deletes a patient with no appointment history; deactivates one whose history must be kept;
+// refuses while upcoming appointments exist.
 async function remove(id) {
   const patient = await get(id);
+  const plan = await removalPlan({ patient: patient._id });
+  if (plan.action === 'refuse') {
+    throw new HttpError(409, `Ce patient a ${plan.upcoming} rendez-vous à venir. Annulez-les avant de le supprimer.`);
+  }
+  if (plan.action === 'deactivate') {
+    await User.updateOne({ _id: patient.user._id }, { active: false });
+    return { patient, deactivated: true };
+  }
   await Patient.deleteOne({ _id: id });
   await User.deleteOne({ _id: patient.user._id });
+  return { patient, deactivated: false };
+}
+
+async function reactivate(id) {
+  const patient = await get(id);
+  await userService.setActive(patient.user._id, true);
   return patient;
 }
 
-module.exports = { list, get, getByUser, create, update, remove };
+module.exports = { list, get, getByUser, create, update, remove, reactivate };

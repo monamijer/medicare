@@ -43,4 +43,9 @@ async function updateUser(id, { email, password, firstName, lastName }) {
   }
 }
 
-module.exports = { createUser, updateUser, MIN_PASSWORD_LENGTH };
+async function setActive(id, active) {
+  const result = await User.updateOne({ _id: id }, { active });
+  if (!result.matchedCount) throw new HttpError(404, 'Utilisateur introuvable.');
+}
+
+module.exports = { createUser, updateUser, setActive, MIN_PASSWORD_LENGTH };

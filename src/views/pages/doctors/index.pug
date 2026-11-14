@@ -22,6 +22,9 @@ block content
             tr
               td
                 a(href=`/doctors/${doctor._id}`) #{doctor.user.firstName} #{doctor.user.lastName}
+                if doctor.user.active === false
+                  |  
+                  span.badge.badge-muted Désactivé
               td= doctor.specialty.name
               td= doctor.user.email
               td= doctor.phone || '-'
@@ -30,10 +33,14 @@ block content
                   a.btn.btn-secondary.btn-sm(href=`/doctors/${doctor._id}/edit`)
                     +icon('pencil')
                     span Modifier
-                  form(method='post', action=`/doctors/${doctor._id}/delete`, data-confirm=`Supprimer ${doctor.user.firstName} ${doctor.user.lastName} ? Son compte sera supprimé. Cette action est définitive.`, data-confirm-title='Supprimer le médecin', data-confirm-label='Supprimer')
-                    button.btn.btn-danger.btn-sm(type='submit')
-                      +icon('trash-2')
-                      span Supprimer
+                  if doctor.user.active === false
+                    form(method='post', action=`/doctors/${doctor._id}/reactivate`)
+                      button.btn.btn-secondary.btn-sm(type='submit') Réactiver
+                  else
+                    form(method='post', action=`/doctors/${doctor._id}/delete`, data-confirm=`Supprimer ${doctor.user.firstName} ${doctor.user.lastName} ? Son compte sera supprimé. Si ce médecin a un historique de rendez-vous, il sera seulement désactivé.`, data-confirm-title='Supprimer le médecin', data-confirm-label='Supprimer')
+                      button.btn.btn-danger.btn-sm(type='submit')
+                        +icon('trash-2')
+                        span Supprimer
   else
     .empty-state
       h2 Aucun médecin

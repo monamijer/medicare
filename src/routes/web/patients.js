@@ -12,5 +12,6 @@ router.get('/:id', controller.show);
 router.get('/:id/edit', controller.editForm);
 router.post('/:id', updateRules, controller.update);
 router.post('/:id/delete', controller.remove);
+router.post('/:id/reactivate', controller.reactivate);
 
 module.exports = router;

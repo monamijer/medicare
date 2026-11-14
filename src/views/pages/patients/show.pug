@@ -7,6 +7,11 @@ block content
     a.btn.btn-secondary(href=`/patients/${patient._id}/edit`)
       +icon('pencil')
       span Modifier
+  if patient.user.active === false
+    .alert.alert-info(role='status')
+      span.alert-text Ce compte est désactivé : connexion impossible, historique de rendez-vous conservé.
+      form(method='post', action=`/patients/${patient._id}/reactivate`)
+        button.btn.btn-secondary.btn-sm(type='submit') Réactiver
   dl.details
     dt Adresse e-mail
     dd= patient.user.email

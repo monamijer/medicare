@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Slot = require('../models/AvailabilitySlot');
+const Doctor = require('../models/Doctor');
 const HttpError = require('../utils/httpError');
 const { zonedToUtc, formatDay, formatTime } = require('../utils/time');
 
@@ -48,6 +49,10 @@ async function listUpcoming(doctorId) {
 }
 
 async function createRange(doctorId, input) {
+  const doctor = await Doctor.findById(doctorId).populate('user', 'active').lean();
+  if (!doctor || !doctor.user || !doctor.user.active) {
+    throw new HttpError(409, "Ce médecin est désactivé : impossible d'ajouter des créneaux.");
+  }
   const wanted = buildRange(input);
   await assertNoOverlap(doctorId, wanted);
   const docs = wanted.map((s) => ({ _id: new mongoose.Types.ObjectId(), doctor: doctorId, ...s }));

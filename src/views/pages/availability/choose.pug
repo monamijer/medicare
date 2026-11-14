@@ -16,6 +16,9 @@ block content
             tr
               td
                 a(href=`/availability?doctor=${doctor._id}`) #{doctor.user.firstName} #{doctor.user.lastName}
+                if doctor.user.active === false
+                  |  
+                  span.badge.badge-muted Désactivé
               td= doctor.specialty.name
   else
     .empty-state

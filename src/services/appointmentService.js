@@ -12,9 +12,16 @@ const populateAll = (query) => query
   .populate({ path: 'doctor', populate: [{ path: 'user', select: 'firstName lastName' }, { path: 'specialty', select: 'name' }] })
   .populate({ path: 'patient', populate: { path: 'user', select: 'firstName lastName' } });
 
+// A deactivated doctor cannot receive new appointments, whatever slots remain.
+async function isDoctorActive(doctorId) {
+  const doctor = await Doctor.findById(doctorId).populate('user', 'active').lean();
+  return Boolean(doctor && doctor.user && doctor.user.active);
+}
+
 // Doctors of a specialty with their number of upcoming free slots.
 async function searchDoctors(specialtyId) {
-  const doctors = await Doctor.find({ specialty: specialtyId }).populate('user', 'firstName lastName').lean();
+  const found = await Doctor.find({ specialty: specialtyId }).populate('user', 'firstName lastName active').lean();
+  const doctors = found.filter((d) => d.user && d.user.active);
   const counts = await AvailabilitySlot.aggregate([
     { $match: { doctor: { $in: doctors.map((d) => d._id) }, status: 'free', start: { $gt: new Date() } } },
     { $group: { _id: '$doctor', count: { $sum: 1 } } },
@@ -35,7 +42,7 @@ async function getBookableSlot(slotId) {
   if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
   const slot = await AvailabilitySlot.findById(slotId).lean();
   if (!slot) throw new HttpError(404, 'Créneau introuvable.');
-  if (slot.status !== 'free' || slot.start <= new Date()) throw new HttpError(409, UNAVAILABLE);
+  if (slot.status !== 'free' || slot.start <= new Date() || !(await isDoctorActive(slot.doctor))) throw new HttpError(409, UNAVAILABLE);
   return slot;
 }
 
@@ -45,6 +52,7 @@ async function book(userId, slotId, reason = '') {
   if (!mongoose.isValidObjectId(slotId)) throw new HttpError(404, 'Créneau introuvable.');
   const wanted = await AvailabilitySlot.findById(slotId).lean();
   if (!wanted) throw new HttpError(404, 'Créneau introuvable.');
+  if (!(await isDoctorActive(wanted.doctor))) throw new HttpError(409, UNAVAILABLE);
 
   if (await Appointment.exists({ patient: patient._id, status: 'confirmed', start: { $lt: wanted.end }, end: { $gt: wanted.start } })) {
     throw new HttpError(409, 'Vous avez déjà un rendez-vous à cette heure.');
@@ -87,7 +95,8 @@ async function ownerFilter(user) {
 async function listFor(user) {
   const filter = await ownerFilter(user);
   if (!filter) return { upcoming: [], history: [] };
-  const all = await populateAll(Appointment.find(filter)).lean();
+  // Appointments whose doctor or patient record no longer exists cannot be displayed.
+  const all = (await populateAll(Appointment.find(filter)).lean()).filter((a) => a.doctor && a.patient);
   const now = new Date();
   const isUpcoming = (a) => a.status === 'confirmed' && a.end > now;
   return {

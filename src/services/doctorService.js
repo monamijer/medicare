@@ -3,13 +3,14 @@ const Doctor = require('../models/Doctor');
 const Specialty = require('../models/Specialty');
 const User = require('../models/User');
 const AvailabilitySlot = require('../models/AvailabilitySlot');
+const { removalPlan } = require('./retention');
 const userService = require('./userService');
 const HttpError = require('../utils/httpError');
 
 const NOT_FOUND = 'Médecin introuvable.';
 const collator = new Intl.Collator('fr', { sensitivity: 'base' });
 
-const populate = (query) => query.populate('user', 'firstName lastName email').populate('specialty', 'name');
+const populate = (query) => query.populate('user', 'firstName lastName email active').populate('specialty', 'name');
 
 async function list() {
   const doctors = await populate(Doctor.find()).lean();
@@ -76,12 +77,29 @@ async function update(id, { firstName, lastName, email, password, specialty, lic
   }
 }
 
+// Deletes a doctor with no appointment history; deactivates one whose history must be kept;
+// refuses while upcoming appointments exist.
 async function remove(id) {
   const doctor = await get(id);
+  const plan = await removalPlan({ doctor: doctor._id });
+  if (plan.action === 'refuse') {
+    throw new HttpError(409, `Ce médecin a ${plan.upcoming} rendez-vous à venir. Annulez-les avant de le supprimer.`);
+  }
+  if (plan.action === 'deactivate') {
+    await AvailabilitySlot.deleteMany({ doctor: id, status: 'free' });
+    await User.updateOne({ _id: doctor.user._id }, { active: false });
+    return { doctor, deactivated: true };
+  }
   await AvailabilitySlot.deleteMany({ doctor: id });
   await Doctor.deleteOne({ _id: id });
   await User.deleteOne({ _id: doctor.user._id });
+  return { doctor, deactivated: false };
+}
+
+async function reactivate(id) {
+  const doctor = await get(id);
+  await userService.setActive(doctor.user._id, true);
   return doctor;
 }
 
-module.exports = { list, get, getByUser, create, update, remove };
+module.exports = { list, get, getByUser, create, update, remove, reactivate };

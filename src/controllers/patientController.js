@@ -66,9 +66,22 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const patient = await patientService.remove(req.params.id);
-  req.flash('success', `Patient « ${fullName(patient)} » supprimé.`);
+  try {
+    const { patient, deactivated } = await patientService.remove(req.params.id);
+    req.flash('success', deactivated
+      ? `Patient « ${fullName(patient)} » désactivé : son historique de rendez-vous est conservé.`
+      : `Patient « ${fullName(patient)} » supprimé.`);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    req.flash('danger', err.message);
+  }
   res.redirect('/patients');
 }
 
-module.exports = { index, show, newForm, create, editForm, update, remove, pick, toErrors, isFormError };
+async function reactivate(req, res) {
+  const patient = await patientService.reactivate(req.params.id);
+  req.flash('success', `Patient « ${fullName(patient)} » réactivé.`);
+  res.redirect(`/patients/${req.params.id}`);
+}
+
+module.exports = { index, show, newForm, create, editForm, update, remove, reactivate, pick, toErrors, isFormError };
