@@ -34,8 +34,11 @@ Vous allez installer deux programmes (Node.js et MongoDB), puis préparer MediCa
 
 ## Étape 4 : récupérer MediCare
 
-1. Sur la page GitHub du projet, cliquez sur le bouton vert **Code**, puis **Download ZIP**.
-2. Faites un clic droit sur le fichier ZIP téléchargé, **Extraire tout…**, et choisissez un dossier simple,
+1. Récupérez le fichier **`medicare.zip`** : soit celui que la personne qui gère le projet vous a remis (clé USB,
+   e-mail), soit, si le dépôt GitHub est public, le bouton vert **Code** puis **Download ZIP**.
+   (Pour un dépôt privé, la personne qui gère le projet crée ce ZIP avec la commande
+   `git archive --format=zip -o medicare.zip HEAD`.)
+2. Faites un clic droit sur le fichier ZIP, **Extraire tout…**, et choisissez un dossier simple,
    par exemple `C:\medicare`.
 3. Ouvrez ce dossier : vous devez voir les fichiers `package.json`, `README.md` et le dossier `src`.
 

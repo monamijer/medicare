@@ -51,6 +51,58 @@ Ce sont des comptes **fictifs** pour la démonstration : ne les gardez pas sur u
 > vous lancez `npm run seed`**. Relancez `npm run seed -- --reset` (serveur arrêté) peu avant la démonstration pour avoir
 > des créneaux à jour.
 
+## Installation sur Windows (résumé)
+
+Guide détaillé, écrit pour quelqu'un qui n'a jamais utilisé la ligne de commande :
+[`docs/INSTALL-WINDOWS.md`](docs/INSTALL-WINDOWS.md). Internet n'est nécessaire qu'**une seule fois** (télécharger
+Node.js, MongoDB et les dépendances) : ensuite MediCare fonctionne hors ligne.
+
+**Préparer le paquet (sur la machine de développement).** Si le dépôt GitHub est privé, « Download ZIP » demande une
+connexion à GitHub. Créez plutôt un ZIP propre, sans `.env` ni `node_modules` :
+
+```bash
+git archive --format=zip -o medicare.zip HEAD
+```
+
+Copiez `medicare.zip` sur l'ordinateur Windows (clé USB, e-mail…). Si le dépôt est public, le bouton vert
+**Code → Download ZIP** suffit.
+
+**Sur l'ordinateur Windows :**
+
+1. Installer **Node.js** (version **LTS**, fichier `.msi` sur nodejs.org) : *Next* partout, option « Add to PATH » cochée.
+2. Installer **MongoDB Community Server** (fichier `.msi` sur mongodb.com/try/download/community) : choisir
+   **Complete** et **laisser cochée** l'option « Install MongoDB as a Service ».
+3. Vérifier que MongoDB tourne : touche Windows, taper `services.msc`, Entrée. La ligne **MongoDB Server (MongoDB)**
+   doit indiquer « En cours d'exécution » (sinon : clic droit, Démarrer).
+4. Extraire `medicare.zip` dans un dossier simple, par exemple **`C:\medicare`** (évitez le Bureau et OneDrive).
+5. Dans l'explorateur, ouvrir `C:\medicare`, cliquer dans la barre d'adresse, taper `cmd`, Entrée. Une fenêtre noire
+   s'ouvre (utilisez `cmd`, pas PowerShell).
+6. Dans la fenêtre noire, une commande à la fois, en attendant la fin de chacune :
+
+   ```
+   npm install
+   copy .env.example .env
+   notepad .env
+   ```
+
+   Dans le Bloc-notes, remplacez la valeur de `SESSION_SECRET` par au moins 20 lettres et chiffres au hasard,
+   sans espaces, puis enregistrez (Ctrl + S).
+7. Charger les données de démonstration, puis lancer :
+
+   ```
+   npm run seed
+   npm start
+   ```
+
+8. Ouvrir **http://127.0.0.1:3000** dans Chrome ou Edge et se connecter avec un compte de démonstration
+   (mot de passe `MediCare2026!`, voir plus haut).
+
+**Les fois suivantes :** ouvrir `cmd` dans le dossier et taper seulement `npm start` (arrêt : Ctrl + C).
+**Avant une présentation :** serveur arrêté, `npm run seed -- --reset` pour avoir des créneaux à jour.
+
+Problèmes fréquents (`npm` non reconnu, MongoDB non démarré, port déjà utilisé…) : voir le tableau de dépannage de
+[`docs/INSTALL-WINDOWS.md`](docs/INSTALL-WINDOWS.md).
+
 ## Parcours de démonstration (5 à 7 minutes)
 
 1. **Patient** (`marie.uwimana@medicare.test`) : *Prendre rendez-vous* → spécialité *Cardiologie* → *Voir les créneaux*
@@ -129,5 +181,7 @@ docs/            guides d'installation et documentation de l'API
   pourraient passer le contrôle de chevauchement ; seuls les médecins et administrateurs créent des créneaux, le risque
   est faible.
 - L'apparence n'a pas été vérifiée automatiquement : la mise en page se contrôle dans un navigateur.
+- Le guide Windows a été écrit et vérifié sous Linux (installation propre, tests, démarrage) mais **n'a pas encore été
+  exécuté sur une vraie machine Windows** : signalez toute étape qui échoue.
 
 Suivi détaillé du projet : [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
