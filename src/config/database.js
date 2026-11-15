@@ -10,7 +10,9 @@ async function connectDatabase() {
       `Impossible de se connecter à MongoDB (${config.mongodbUri}).\n` +
       'Vérifiez que MongoDB est démarré :\n' +
       '  - Arch Linux : sudo systemctl start mongodb\n' +
-      '  - Windows    : service "MongoDB Server" (services.msc)'
+      '  - Windows    : ouvrez « Services » (touche Windows, tapez services.msc),\n' +
+      '                 puis démarrez « MongoDB Server (MongoDB) »\n' +
+      'Guides : docs/INSTALL-WINDOWS.md et docs/INSTALL-ARCH.md'
     );
     error.cause = err;
     throw error;

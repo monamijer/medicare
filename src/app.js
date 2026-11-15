@@ -5,14 +5,19 @@ const apiRoutes = require('./routes/api');
 const { createSessionMiddleware } = require('./config/session');
 const flash = require('./middleware/flash');
 const viewLocals = require('./middleware/viewLocals');
+const { securityHeaders, sameOriginOnly } = require('./middleware/security');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+
+app.disable('x-powered-by');
+app.use(securityHeaders);
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(sameOriginOnly);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

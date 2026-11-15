@@ -1,79 +1,133 @@
 # MediCare
 
-Medical appointment management web app. Patients book appointments, doctors manage their
-availability and agenda, administrators manage the whole clinic. The interface is in French.
+Application web de **gestion de rendez-vous médicaux** pour un petit cabinet.
+Projet académique : simple, lisible, fonctionne **hors ligne** avec une base MongoDB installée sur l'ordinateur.
 
-## Stack
+Interface en **français**. Trois rôles : administrateur, médecin, patient.
 
-Node.js (>= 20), Express 5, Pug templates, MongoDB with Mongoose, cookie sessions stored in
-MongoDB, vanilla CSS and vanilla JS (no bundler, no CSS framework).
+## Fonctionnalités
 
-## Getting started
+| Rôle | Ce qu'il peut faire |
+|---|---|
+| **Patient** | Créer son compte, rechercher un médecin par spécialité, voir les créneaux libres, réserver, modifier ou annuler un rendez-vous, consulter son historique, modifier son profil |
+| **Médecin** | Définir ses disponibilités (créneaux de 15 à 60 min, sans chevauchement), voir son agenda du jour et tous ses rendez-vous, annuler un rendez-vous |
+| **Administrateur** | Gérer médecins, patients, spécialités, administrateurs, disponibilités et rendez-vous de tout le monde |
+
+Règles garanties par le serveur (et testées) : un créneau occupé ne peut pas être réservé, deux réservations
+simultanées ne créent jamais de double réservation, une annulation libère le créneau, on ne réserve pas dans le passé,
+un patient ne peut pas avoir deux rendez-vous en même temps, les disponibilités d'un médecin ne se chevauchent pas.
+Supprimer un médecin ou un patient qui a des rendez-vous à venir est refusé ; avec seulement un historique, le compte
+est désactivé et l'historique conservé.
+
+Une **API REST** (`/api/v1`) expose les mêmes fonctions : voir [`docs/API.md`](docs/API.md).
+
+## Démarrage rapide
+
+1. Installer Node.js (version 20 ou plus) et MongoDB Community Server, **et démarrer MongoDB**.
+   Guides pas à pas : [**Windows**](docs/INSTALL-WINDOWS.md) · [**Arch Linux**](docs/INSTALL-ARCH.md).
+2. Dans le dossier du projet :
 
 ```bash
 npm install
-# create a .env file (variables are read by src/config/env.js, including CLINIC_TIMEZONE)
-npm run create-admin     # create the first administrator account
-npm run dev              # start with auto-reload
-npm start                # start in production mode
+cp .env.example .env        # Windows : copy .env.example .env
+# éditez .env : donnez une vraie valeur à SESSION_SECRET
+npm run seed                # données fictives de démonstration
+npm start                   # http://127.0.0.1:3000
 ```
 
-MongoDB must be running and reachable with the connection settings from `.env`.
+### Comptes de démonstration
 
-## Scripts
+Mot de passe de **tous** les comptes : `MediCare2026!`
 
-| Command | Purpose |
-| --- | --- |
-| `npm start` | Run the server |
-| `npm run dev` | Run with `node --watch` |
-| `npm test` | Run the test suite (`node:test`, needs MongoDB) |
-| `npm run build:assets` | Rebuild the icon sprite and copy fonts (output is committed) |
-| `npm run create-admin` | Create an administrator account |
+| Rôle | E-mail |
+|---|---|
+| Administrateur | `admin@medicare.test` |
+| Médecins | `aline.niyonkuru@medicare.test` (généraliste), `pascal.ndayishimiye@medicare.test` (cardiologue), `sandrine.hakizimana@medicare.test`, `eric.nsengiyumva@medicare.test`, `claudine.irakoze@medicare.test`, `joel.bigirimana@medicare.test` |
+| Patients | `marie.uwimana@medicare.test`, `jean.niyonzima@medicare.test`, `grace.ndikumana@medicare.test`, `david.habonimana@medicare.test`, … |
 
-## Roles and sections
+Ce sont des comptes **fictifs** pour la démonstration : ne les gardez pas sur une installation réelle.
 
-| Role | Access |
-| --- | --- |
-| Administrator | Home, daily agenda, appointments, doctors, patients, availability, specialties, users |
-| Doctor | Home, daily agenda, own appointments, own availability |
-| Patient | Home, book an appointment, own appointments, own profile |
+> **Avant une présentation :** les créneaux de démonstration couvrent les **7 prochains jours ouvrés à partir du jour où
+> vous lancez `npm run seed`**. Relancez `npm run seed -- --reset` (serveur arrêté) peu avant la démonstration pour avoir
+> des créneaux à jour.
 
-The **Users** section (`/users`, administrators only) lists every account and lets you create,
-edit, deactivate and reactivate administrator accounts. Doctor and patient accounts are managed
-from their own sections because they need a profile. You cannot deactivate your own account.
+## Parcours de démonstration (5 à 7 minutes)
 
-## Project structure
+1. **Patient** (`marie.uwimana@medicare.test`) : *Prendre rendez-vous* → spécialité *Cardiologie* → *Voir les créneaux*
+   → choisir un créneau → *Confirmer*. Dans *Mes rendez-vous* : *Modifier* (autre créneau), puis *Annuler*.
+2. **Médecin** (`pascal.ndayishimiye@medicare.test`) : *Agenda du jour* (changer de jour), puis *Mes disponibilités* →
+   *Ajouter des créneaux*. Essayer d'ajouter une plage qui en chevauche une autre : le chevauchement est refusé.
+3. **Administrateur** : *Médecins* (fiche, modification), *Spécialités*, *Utilisateurs*. Essayer de supprimer un médecin
+   qui a un rendez-vous à venir : c'est refusé avec une explication.
+4. **Pas de double réservation** : ouvrir deux navigateurs avec deux patients différents, afficher le même créneau dans
+   les deux, confirmer dans le premier puis dans le second : le second reçoit « Ce créneau n'est plus disponible ».
 
+## Commandes
+
+| Commande | Effet |
+|---|---|
+| `npm start` | Lance l'application sur http://127.0.0.1:3000 |
+| `npm run dev` | Idem avec rechargement automatique (développement) |
+| `npm run seed` | Remplit une base **vide** avec les données de démonstration (refuse sinon) |
+| `npm run seed -- --reset` | **Efface la base** puis remet les données de démonstration |
+| `npm run create-admin -- <e-mail> <mot_de_passe> <prénom> <nom>` | Crée un compte administrateur |
+| `npm test` | Lance les tests (MongoDB doit tourner ; bases temporaires, votre base n'est pas touchée) |
+| `npm run build:assets` | Régénère la feuille d'icônes et copie les polices (inutile en usage normal) |
+
+## Configuration (`.env`)
+
+| Variable | Rôle | Valeur par défaut |
+|---|---|---|
+| `PORT` | Port du serveur | `3000` |
+| `NODE_ENV` | `development` ou `production` | `development` |
+| `MONGODB_URI` | Adresse de la base | `mongodb://127.0.0.1:27017/medicare` |
+| `SESSION_SECRET` | Secret des sessions (**obligatoire**, à personnaliser) | — |
+| `CLINIC_TIMEZONE` | Fuseau horaire du cabinet (heures saisies et affichées) | `Africa/Bujumbura` |
+| `COOKIE_SECURE` | `true` seulement si le site est servi en HTTPS | `false` |
+| `BCRYPT_ROUNDS` | (avancé) coût du hachage des mots de passe | `10` |
+
+Le fichier `.env` n'est jamais versionné (il est dans `.gitignore`).
+
+## Choix techniques
+
+- **Serveur :** Node.js, Express. **Pages :** Pug, JavaScript natif, CSS maison, icônes Lucide (copiées en local).
+  **Base :** MongoDB local avec Mongoose. Pas de framework front, pas de CDN, pas de service externe.
+- **Une seule logique métier** (`src/services`) partagée par les pages web (`src/routes/web`) et l'API (`src/routes/api`).
+- **Heures :** saisies et affichées à l'heure du cabinet, stockées en UTC (tests sur les changements d'heure).
+- **Sécurité :** mots de passe hachés (bcrypt), sessions en base (cookie `HttpOnly`, `SameSite=Lax`), contrôle des rôles
+  à chaque requête, validation côté serveur, protection contre les requêtes venant d'un autre site (en-tête `Origin`),
+  en-têtes de sécurité dont une politique CSP stricte (aucun script ou style en ligne, aucune ressource externe).
+- **Concurrence :** pas de transactions (MongoDB local « standalone ») : les opérations sont atomiques, avec index uniques
+  et compensation en cas d'échec (détails dans `PROJECT_STATUS.md`).
+
+## Organisation du code
+
+```text
 src/
-app.js, server.js Express app and entry point
-config/ env, database, session
-controllers/ routes/ web controllers and routes (routes/api for the REST API)
-services/ models/ business logic and Mongoose schemas
-validators/ middleware/ express-validator rules, auth, flash, errors, view locals
-utils/ dates, time, navigation, session helpers
-views/ Pug: layouts/, partials/, pages/
-public/ css/, js/, assets/ (fonts, icon sprite)
-tests/ node:test suites and helpers
-docs/API.md REST API reference (/api/v1)
-PROJECT_STATUS.md Project history, decisions and known problems
+  config/        environnement, base de données, sessions
+  controllers/   traitement des requêtes HTTP (api/ pour l'API)
+  services/      règles métier (réservation, disponibilités, comptes…)
+  models/        schémas Mongoose
+  routes/        web/ (pages) et api/ (JSON)
+  middleware/    authentification, rôles, sécurité, erreurs
+  validators/    validation des saisies
+  utils/         heures, dates, sérialisation de l'API
+  views/         gabarits Pug (layouts, partials, pages, errors)
+  public/        CSS, JavaScript, polices et icônes locales
+scripts/         seed, create-admin, build-assets
+tests/           tests automatiques (node:test)
+docs/            guides d'installation et documentation de l'API
+```
 
+## Limites connues
 
-## UI shell
+- Les **rappels par e-mail et SMS** et la **vue calendrier** (fonctionnalités optionnelles du cahier des charges)
+  ne sont **pas réalisés**.
+- Seuls le patient (pour ses propres rendez-vous) et l'administrateur peuvent **déplacer** un rendez-vous, et toujours
+  chez le même médecin ; pour changer de médecin, annuler puis reprendre rendez-vous. Le médecin peut annuler.
+- Sans transactions, deux demandes strictement simultanées sur des créneaux de départ différents qui se chevauchent
+  pourraient passer le contrôle de chevauchement ; seuls les médecins et administrateurs créent des créneaux, le risque
+  est faible.
+- L'apparence n'a pas été vérifiée automatiquement : la mise en page se contrôle dans un navigateur.
 
-`views/layouts/base.pug` renders `header`, then `.app-frame` (sidebar rail + `.app-body` >
-`.shell` > `main.page`), then a full-width `footer`.
-
-- Header is sticky; the sidebar menu sticks under it on desktop.
-- Sidebar state is owned by `public/js/shell.js` and exposed as `<html data-sidebar="open|closed">`.
-  Desktop (>= 62rem): in-flow rail, collapsible with the hamburger (choice remembered).
-  Below 62rem: off-canvas drawer with a backdrop.
-- The `62rem` breakpoint in `public/css/layout.css` must match the `matchMedia` query in `shell.js`.
-- CSS order: `tokens.css`, `main.css`, `layout.css`, `components.css`.
-
-## Tests
-
-`npm test` runs against a real MongoDB using a throw-away database per test process.
-
-## REST API
-
-JSON API under `/api/v1`, same cookie session as the web app. See `docs/API.md`.
+Suivi détaillé du projet : [`PROJECT_STATUS.md`](PROJECT_STATUS.md).

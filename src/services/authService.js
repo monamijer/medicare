@@ -1,10 +1,11 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const HttpError = require('../utils/httpError');
+const config = require('../config/env');
 
 const INVALID_CREDENTIALS = 'Adresse e-mail ou mot de passe incorrect.';
 // Compared when the email is unknown, so response time does not reveal which emails exist.
-const DUMMY_HASH = bcrypt.hashSync('dummy-password', 10);
+const DUMMY_HASH = bcrypt.hashSync('dummy-password', config.bcryptRounds);
 
 async function authenticate(email, password) {
   const user = await User.findOne({ email: String(email || '').trim().toLowerCase() }).select('+passwordHash');

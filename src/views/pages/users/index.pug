@@ -3,7 +3,9 @@ extends ../../layouts/base
 block content
   include ../../partials/icon
   .page-header
-    h1 Utilisateurs
+    div
+      h1 Utilisateurs
+      p.text-muted Tous les comptes de la clinique. Les médecins et les patients se gèrent depuis leur section.
     a.btn.btn-primary(href='/users/new')
       +icon('plus')
       span Nouvel administrateur
@@ -15,38 +17,33 @@ block content
           th(scope='col') E-mail
           th(scope='col') Rôle
           th(scope='col') Statut
-          th.col-actions(scope='col') Actions
+          th.col-actions(scope='col') Action
       tbody
-        each account in users
-          - const isSelf = String(account._id) === currentUser.id
+        each user in users
           tr
+            td #{user.firstName} #{user.lastName}
+              if user.isSelf
+                span.text-muted  (vous)
+            td= user.email
             td
-              | #{account.firstName} #{account.lastName}
-              if isSelf
-                |  
-                span.badge.badge-info Vous
-            td= account.email
+              if user.role === 'admin'
+                span.badge.badge-muted Administrateur
+              else if user.role === 'doctor'
+                span.badge.badge-muted Médecin
+              else
+                span.badge.badge-muted Patient
             td
-              span.badge.badge-role= roleLabels[account.role]
-            td
-              if account.active === false
-                span.badge.badge-muted Désactivé
+              if user.active === false
+                span.badge.badge-danger Désactivé
               else
                 span.badge.badge-success Actif
             td.col-actions
-              if account.role === 'admin'
-                .table-actions
-                  a.btn.btn-secondary.btn-sm(href=`/users/${account._id}/edit`)
-                    +icon('pencil')
-                    span Modifier
-                  if account.active === false
-                    form(method='post', action=`/users/${account._id}/reactivate`)
-                      button.btn.btn-secondary.btn-sm(type='submit') Réactiver
-                  else if !isSelf
-                    form(method='post', action=`/users/${account._id}/deactivate`, data-confirm=`Désactiver le compte de ${account.firstName} ${account.lastName} ? Cette personne ne pourra plus se connecter.`, data-confirm-title='Désactiver le compte', data-confirm-label='Désactiver')
-                      button.btn.btn-danger.btn-sm(type='submit')
-                        span Désactiver
-              else if account.role === 'doctor'
-                a.text-link(href='/doctors') Gérer dans Médecins
-              else
-                a.text-link(href='/patients') Gérer dans Patients
+              if user.role === 'admin'
+                if user.active === false
+                  form(method='post', action=`/users/${user._id}/reactivate`)
+                    button.btn.btn-secondary.btn-sm(type='submit') Réactiver
+                else if !user.isSelf
+                  form(method='post', action=`/users/${user._id}/deactivate`, data-confirm=`Désactiver le compte de ${user.firstName} ${user.lastName} ? Cette personne ne pourra plus se connecter.`, data-confirm-title='Désactiver le compte', data-confirm-label='Désactiver')
+                    button.btn.btn-danger.btn-sm(type='submit') Désactiver
+              else if user.profileUrl
+                a.btn.btn-secondary.btn-sm(href=user.profileUrl) Voir la fiche
