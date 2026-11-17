@@ -19,7 +19,9 @@ un patient ne peut pas avoir deux rendez-vous en même temps, les disponibilité
 Supprimer un médecin ou un patient qui a des rendez-vous à venir est refusé ; avec seulement un historique, le compte
 est désactivé et l'historique conservé.
 
-Une **API REST** (`/api/v1`) expose les mêmes fonctions : voir [`docs/API.md`](docs/API.md).
+Une **API REST** (`/api/v1`) expose les mêmes fonctions : voir [`docs/API.md`](docs/API.md). L'adresse
+`http://127.0.0.1:3000/api/v1` affiche l'index de l'API ; connectez-vous d'abord dans l'application web pour pouvoir
+ouvrir les adresses de lecture (`GET`) directement dans le navigateur.
 
 ## Démarrage rapide
 

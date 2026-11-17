@@ -36,6 +36,16 @@ Every error has the same shape:
 | 422 | Invalid input |
 | 500 | Unexpected server error |
 
+## Index
+
+`GET /api/v1` (no login needed) returns a small JSON index: the API name and version, where the documentation is,
+how to authenticate, and every resource with who may use it.
+
+**Trying it in a browser:** sign in to the web application first (`/login`). The API uses the same session cookie, so
+every `GET` address of this document then opens directly in the browser tab, for example `/api/v1/doctors` or
+`/api/v1/appointments`. Without being signed in, those addresses answer `401`. Writing requests (`POST`, `PUT`,
+`DELETE`) need a tool such as Postman or `curl`.
+
 ## Health
 
 `GET /health` -> `200 {"status":"ok"}` (no login needed)

@@ -138,3 +138,31 @@ test('non-JSON bodies get 415, broken JSON gets 400, unknown routes get a JSON 4
   assert.strictEqual(missing.status, 404);
   assert.strictEqual(missing.json.error.status, 404);
 });
+
+test('the API root is a readable index, public, and every link in it exists', async () => {
+  for (const url of ['/api/v1', '/api/v1/']) {
+    const res = await newClient().request(url);
+    assert.strictEqual(res.status, 200, url);
+    assert.strictEqual(res.json.name, 'MediCare API');
+    assert.strictEqual(res.json.version, 'v1');
+    assert.match(res.json.documentation, /docs\/API\.md/);
+    assert.deepStrictEqual(Object.keys(res.json.resources).sort(), ['appointments', 'auth', 'availability', 'doctors', 'health', 'patients', 'specialties']);
+  }
+  const { json } = await newClient().request('/api/v1');
+  for (const [name, { path, access }] of Object.entries(json.resources)) {
+    assert.ok(access, `${name} says who may use it`);
+    const res = await newClient().request(path);
+    assert.ok([200, 401, 403].includes(res.status), `${name}: ${path} answered ${res.status} (a link in the index must not be a 404)`);
+  }
+});
+
+test('a session opened in the web app also works for API addresses opened in the browser', async () => {
+  await createUser('admin');
+  const client = newClient();
+  const login = await client.request('/login', { method: 'POST', form: { email: 'admin@clinique.test', password: PASSWORD } });
+  assert.strictEqual(login.status, 302);
+  const doctors = await client.request('/api/v1/doctors');
+  assert.strictEqual(doctors.status, 200);
+  assert.ok(Array.isArray(doctors.json.doctors));
+  assert.strictEqual((await client.request('/api/v1/auth/me')).json.user.role, 'admin');
+});
