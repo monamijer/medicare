@@ -6,7 +6,11 @@ const config = {
   mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/medicare',
   sessionSecret: process.env.SESSION_SECRET,
   // bcrypt work factor: 10 is a sound default; tests lower it to run faster.
-  bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 10,
+  // parseInt keeps a non-numeric or empty BCRYPT_ROUNDS from becoming NaN.
+  bcryptRounds: (() => {
+    const n = parseInt(process.env.BCRYPT_ROUNDS, 10);
+    return Number.isInteger(n) && n > 0 ? n : 10;
+  })(),
   cookieSecure: process.env.COOKIE_SECURE === 'true',
   clinicTimezone: process.env.CLINIC_TIMEZONE || 'Africa/Bujumbura',
 };

@@ -57,6 +57,16 @@ async function listAll() {
   return users.sort((a, b) => collator.compare(`${a.lastName} ${a.firstName}`, `${b.lastName} ${b.firstName}`));
 }
 
+// Alias expected by the admin users tests.
+const list = listAll;
+
+async function get(id) {
+  if (!mongoose.isValidObjectId(id)) throw new HttpError(404, 'Utilisateur introuvable.');
+  const user = await User.findById(id).lean();
+  if (!user) throw new HttpError(404, 'Utilisateur introuvable.');
+  return user;
+}
+
 // Admin accounts are switched on and off here. Doctors and patients are handled in their own sections
 // because their appointments must be taken into account.
 async function setAdminActive(actorId, id, active) {
@@ -83,4 +93,4 @@ async function setAdminActive(actorId, id, active) {
   return target;
 }
 
-module.exports = { createUser, updateUser, setActive, listAll, setAdminActive, MIN_PASSWORD_LENGTH };
+module.exports = { createUser, updateUser, setActive, listAll, list, get, setAdminActive, MIN_PASSWORD_LENGTH };
